@@ -16,18 +16,21 @@ class CourseDetailsViewModel(
     private val repository: CourseRepository
 ) : ViewModel() {
 
+    private val _isLoading = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<CourseDetailsUiState> = combine(
         repository.observeCourse(courseId),
         repository.observeLessons(courseId),
+        _isLoading,
         _errorMessage
-    ) { course, lessons, error ->
+    ) { course, lessons, isLoading, error ->
         when {
             course != null -> CourseDetailsUiState.Success(
                 course = course,
                 lessons = lessons
             )
+            isLoading -> CourseDetailsUiState.Loading
             error != null -> CourseDetailsUiState.Error(error)
             else -> CourseDetailsUiState.Loading
         }
@@ -38,17 +41,21 @@ class CourseDetailsViewModel(
     )
 
     init {
-        refresh()
+        // DB-First: Loads lessons already in Room; only hits API if not cached
+        refresh(forceRefresh = false)
     }
 
-    fun refresh() {
+    fun refresh(forceRefresh: Boolean = false) {
         viewModelScope.launch {
+            _isLoading.value = true
             try {
-                repository.refreshLessons(courseId)
+                repository.refreshLessons(courseId, forceRefresh = forceRefresh)
             } catch (e: Exception) {
                 if (uiState.value !is CourseDetailsUiState.Success) {
                     _errorMessage.value = e.message ?: "Failed to load course details"
                 }
+            } finally {
+                _isLoading.value = false
             }
         }
     }

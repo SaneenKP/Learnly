@@ -7,6 +7,8 @@ import com.example.learningdashboard.data.local.dao.LessonDao
 import com.example.learningdashboard.data.remote.CourseApi
 import com.example.learningdashboard.data.remote.FakeCourseApi
 import com.example.learningdashboard.data.repository.CourseRepositoryImpl
+import com.example.learningdashboard.data.util.DefaultNetworkManager
+import com.example.learningdashboard.data.util.NetworkManager
 import com.example.learningdashboard.domain.repository.CourseRepository
 
 interface AppContainer {
@@ -14,6 +16,7 @@ interface AppContainer {
     val courseDao: CourseDao
     val lessonDao: LessonDao
     val courseApi: CourseApi
+    val networkManager: NetworkManager
     val courseRepository: CourseRepository
 }
 
@@ -35,11 +38,16 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         FakeCourseApi(context)
     }
 
+    override val networkManager: NetworkManager by lazy {
+        DefaultNetworkManager(context)
+    }
+
     override val courseRepository: CourseRepository by lazy {
         CourseRepositoryImpl(
             courseDao = courseDao,
             lessonDao = lessonDao,
-            courseApi = courseApi
+            courseApi = courseApi,
+            networkManager = networkManager
         )
     }
 }

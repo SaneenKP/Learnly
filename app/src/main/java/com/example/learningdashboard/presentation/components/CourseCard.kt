@@ -7,11 +7,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,47 +28,57 @@ fun CourseCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(20.dp)
         ) {
-            Text(
-                text = course.title,
-                style = MaterialTheme.typography.titleMedium
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Instructor: ${course.instructor}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${course.completedLessons}/${course.totalLessons} Lessons",
-                    style = MaterialTheme.typography.bodySmall
+                    text = course.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
                 )
-                Text(
-                    text = "${course.progress}%",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                if (course.category.isNotBlank()) {
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(course.category, style = MaterialTheme.typography.labelSmall) }
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            LinearProgressIndicator(
-                progress = { course.progress / 100f },
-                modifier = Modifier.fillMaxWidth()
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Instructor: ${course.instructor}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(12.dp))
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            AppProgressBar(
+                progressPercent = course.progress,
+                showLabel = true,
+                label = "${course.completedLessons}/${course.totalLessons} Lessons"
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Button(
                 onClick = { onContinueClick(course.id) },
-                modifier = Modifier.align(Alignment.End)
+                modifier = Modifier.align(Alignment.End),
+                shape = RoundedCornerShape(8.dp)
             ) {
                 Text("Continue")
             }

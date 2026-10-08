@@ -35,9 +35,7 @@ fun LearningDashboardApp(
 ) {
     LearningDashboardTheme {
         Surface(
-            modifier = modifier
-                .fillMaxSize()
-                .safeDrawingPadding(),
+            modifier = modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
             AppNavHost(appContainer = appContainer)

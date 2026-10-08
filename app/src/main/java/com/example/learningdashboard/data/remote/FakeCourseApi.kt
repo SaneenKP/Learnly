@@ -9,7 +9,7 @@ import java.io.IOException
 
 class FakeCourseApi(
     private val context: Context,
-    private val networkDelayMs: Long = 300L
+    private val networkDelayMs: Long = 1000L
 ) : CourseApi {
 
     private val json = Json {

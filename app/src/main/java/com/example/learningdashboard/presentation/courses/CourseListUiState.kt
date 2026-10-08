@@ -8,10 +8,13 @@ sealed interface CourseListUiState {
 
     data class Success(
         val courses: List<Course>,
-        val userMessage: String? = null
+        val userMessage: String? = null,
+        val isRefreshing: Boolean = false
     ) : CourseListUiState
 
-    data object Empty : CourseListUiState
+    data class Empty(
+        val message: String = "No courses found."
+    ) : CourseListUiState
 
     data class Error(
         val message: String

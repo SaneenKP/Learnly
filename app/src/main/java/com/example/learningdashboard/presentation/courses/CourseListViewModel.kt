@@ -26,12 +26,15 @@ class CourseListViewModel(
             courses.isNotEmpty() -> {
                 CourseListUiState.Success(
                     courses = courses,
-                    userMessage = error
+                    userMessage = error,
+                    isRefreshing = isRefreshing
                 )
             }
             isRefreshing -> CourseListUiState.Loading
             error != null -> CourseListUiState.Error(error)
-            else -> CourseListUiState.Empty
+            else -> CourseListUiState.Empty(
+                message = "No courses cached locally. Connect to internet and refresh to download courses."
+            )
         }
     }.stateIn(
         scope = viewModelScope,
@@ -40,20 +43,38 @@ class CourseListViewModel(
     )
 
     init {
-        refresh()
+        // Initial load: Fetches from DB first. Only reaches API if DB has no data and device is online.
+        loadCourses(forceRefresh = false)
     }
 
     fun refresh() {
+        loadCourses(forceRefresh = true)
+    }
+
+    private fun loadCourses(forceRefresh: Boolean) {
         viewModelScope.launch {
             _isRefreshing.value = true
             _errorMessage.value = null
             try {
-                repository.refreshCourses()
+                repository.refreshCourses(forceRefresh = forceRefresh)
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "Failed to refresh courses"
             } finally {
                 _isRefreshing.value = false
             }
+        }
+    }
+
+    /**
+     * Erases the entire Room database and navigates back to Login screen.
+     */
+    fun logout(onLoggedOut: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                repository.clearAllData()
+            } catch (_: Exception) {
+            }
+            onLoggedOut()
         }
     }
 }

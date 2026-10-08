@@ -23,14 +23,19 @@ interface CourseRepository {
     fun observeLessons(courseId: Long): Flow<List<Lesson>>
 
     /**
-     * Refreshes course list from remote source and updates local database cache.
+     * Refreshes course list adhering to DB-first policy:
+     * - If DB already contains courses and forceRefresh is false, no API call is performed.
+     * - If DB is empty, checks connectivity; if offline, API call is not performed.
+     * - If online (or forceRefresh), fetches from API and caches in Room.
      */
-    suspend fun refreshCourses()
+    suspend fun refreshCourses(forceRefresh: Boolean = false)
 
     /**
-     * Refreshes lessons for a given course from remote source and updates local database cache.
+     * Refreshes lessons for a given course:
+     * - If DB already contains lessons for this course and forceRefresh is false, no API call is performed.
+     * - If empty and online, fetches from API and caches in Room.
      */
-    suspend fun refreshLessons(courseId: Long)
+    suspend fun refreshLessons(courseId: Long, forceRefresh: Boolean = false)
 
     /**
      * Marks a lesson as completed or incomplete.
@@ -41,4 +46,9 @@ interface CourseRepository {
         lessonId: Long,
         completed: Boolean = true
     )
+
+    /**
+     * Erases the entire local database (used for logout).
+     */
+    suspend fun clearAllData()
 }

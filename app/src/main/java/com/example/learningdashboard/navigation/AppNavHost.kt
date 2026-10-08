@@ -37,7 +37,9 @@ fun AppNavHost(
         modifier = modifier
     ) {
         composable(AppRoutes.LOGIN) {
-            val loginViewModel: LoginViewModel = viewModel()
+            val loginViewModel: LoginViewModel = viewModel(
+                factory = LoginViewModel.provideFactory(appContainer.networkManager)
+            )
             LoginRoute(
                 viewModel = loginViewModel,
                 onNavigateToDashboard = {
@@ -58,6 +60,13 @@ fun AppNavHost(
                 viewModel = courseListViewModel,
                 onCourseClick = { courseId ->
                     navController.navigate(AppRoutes.courseDetails(courseId))
+                },
+                onLogout = {
+                    navController.navigate(AppRoutes.LOGIN) {
+                        popUpTo(0) {
+                            inclusive = true
+                        }
+                    }
                 }
             )
         }
