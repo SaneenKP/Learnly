@@ -2,9 +2,10 @@ package com.example.learningdashboard.domain.usecase
 
 import com.example.learningdashboard.data.util.NetworkManager
 import com.example.learningdashboard.domain.error.AppError
+import com.example.learningdashboard.domain.repository.AuthRepository
 import com.example.learningdashboard.domain.repository.UserPreferencesRepository
+import com.example.learningdashboard.util.Constants
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 interface LoginUseCase {
@@ -12,12 +13,12 @@ interface LoginUseCase {
 }
 
 class LoginUseCaseImpl(
+    private val authRepository: AuthRepository,
     private val networkManager: NetworkManager,
-    private val userPreferencesRepository: UserPreferencesRepository,
-    private val simulatedDelayMs: Long = 1200L
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : LoginUseCase {
 
-    private val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    private val emailRegex = Regex(Constants.Validation.EMAIL_REGEX_PATTERN)
 
     override suspend fun invoke(email: String, password: String) = withContext(Dispatchers.IO) {
         if (!networkManager.isCurrentlyOnline()) {
@@ -32,24 +33,13 @@ class LoginUseCaseImpl(
 
         when {
             password.isBlank() -> throw AppError.BusinessError.EmptyPassword()
-            password.length < 6 -> throw AppError.BusinessError.ShortPassword()
+            password.length < Constants.Validation.MIN_PASSWORD_LENGTH -> throw AppError.BusinessError.ShortPassword()
         }
 
-        // Simulated network latency on Dispatchers.IO
-        if (simulatedDelayMs > 0) {
-            delay(simulatedDelayMs)
-        }
+        // Call the remote login API through AuthRepository
+        authRepository.login(trimmedEmail, password)
 
-        if (trimmedEmail != REQUIRED_EMAIL || password != REQUIRED_PASSWORD) {
-            throw AppError.BusinessError.InvalidCredentials()
-        }
-
-        // Persist logged-in state to DataStore
+        // On successful authentication, persist logged-in state to DataStore
         userPreferencesRepository.setLoggedIn(true)
-    }
-
-    companion object {
-        const val REQUIRED_EMAIL = "student@university.edu"
-        const val REQUIRED_PASSWORD = "password123"
     }
 }

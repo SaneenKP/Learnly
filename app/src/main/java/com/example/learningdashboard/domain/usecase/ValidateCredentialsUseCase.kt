@@ -1,5 +1,7 @@
 package com.example.learningdashboard.domain.usecase
 
+import com.example.learningdashboard.util.Constants
+
 interface ValidateCredentialsUseCase {
     fun validateEmail(email: String): String?
     fun validatePassword(password: String): String?
@@ -7,7 +9,7 @@ interface ValidateCredentialsUseCase {
 
 class ValidateCredentialsUseCaseImpl : ValidateCredentialsUseCase {
 
-    private val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    private val emailRegex = Regex(Constants.Validation.EMAIL_REGEX_PATTERN)
 
     override fun validateEmail(email: String): String? {
         val trimmed = email.trim()
@@ -21,7 +23,8 @@ class ValidateCredentialsUseCaseImpl : ValidateCredentialsUseCase {
     override fun validatePassword(password: String): String? {
         return when {
             password.isBlank() -> "Password cannot be empty"
-            password.length < 6 -> "Password must be at least 6 characters"
+            password.length < Constants.Validation.MIN_PASSWORD_LENGTH ->
+                "Password must be at least ${Constants.Validation.MIN_PASSWORD_LENGTH} characters"
             else -> null
         }
     }

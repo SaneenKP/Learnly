@@ -5,11 +5,15 @@ import com.example.learningdashboard.data.local.AppDatabase
 import com.example.learningdashboard.data.local.dao.CourseDao
 import com.example.learningdashboard.data.local.dao.LessonDao
 import com.example.learningdashboard.data.local.datastore.UserPreferencesRepositoryImpl
+import com.example.learningdashboard.data.remote.AuthApi
 import com.example.learningdashboard.data.remote.CourseApi
+import com.example.learningdashboard.data.remote.FakeAuthApi
 import com.example.learningdashboard.data.remote.FakeCourseApi
+import com.example.learningdashboard.data.repository.AuthRepositoryImpl
 import com.example.learningdashboard.data.repository.CourseRepositoryImpl
 import com.example.learningdashboard.data.util.DefaultNetworkManager
 import com.example.learningdashboard.data.util.NetworkManager
+import com.example.learningdashboard.domain.repository.AuthRepository
 import com.example.learningdashboard.domain.repository.CourseRepository
 import com.example.learningdashboard.domain.repository.UserPreferencesRepository
 import com.example.learningdashboard.domain.usecase.GetAuthStateUseCase
@@ -38,8 +42,10 @@ interface AppContainer {
     val courseDao: CourseDao
     val lessonDao: LessonDao
     val courseApi: CourseApi
+    val authApi: AuthApi
     val networkManager: NetworkManager
     val courseRepository: CourseRepository
+    val authRepository: AuthRepository
     val userPreferencesRepository: UserPreferencesRepository
 
     // Domain Use Cases
@@ -73,6 +79,10 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         FakeCourseApi(context)
     }
 
+    override val authApi: AuthApi by lazy {
+        FakeAuthApi()
+    }
+
     override val networkManager: NetworkManager by lazy {
         DefaultNetworkManager(context)
     }
@@ -89,6 +99,12 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         )
     }
 
+    override val authRepository: AuthRepository by lazy {
+        AuthRepositoryImpl(
+            authApi = authApi
+        )
+    }
+
     override val getAuthStateUseCase: GetAuthStateUseCase by lazy {
         GetAuthStateUseCaseImpl(
             userPreferencesRepository = userPreferencesRepository
@@ -101,6 +117,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val loginUseCase: LoginUseCase by lazy {
         LoginUseCaseImpl(
+            authRepository = authRepository,
             networkManager = networkManager,
             userPreferencesRepository = userPreferencesRepository
         )

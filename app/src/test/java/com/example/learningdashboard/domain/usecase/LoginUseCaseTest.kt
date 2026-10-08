@@ -1,28 +1,40 @@
 package com.example.learningdashboard.domain.usecase
 
+import com.example.learningdashboard.data.remote.FakeAuthApi
+import com.example.learningdashboard.data.repository.AuthRepositoryImpl
 import com.example.learningdashboard.data.util.NetworkManager
 import com.example.learningdashboard.domain.error.AppError
 import com.example.learningdashboard.domain.repository.UserPreferencesRepository
+import com.example.learningdashboard.util.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 class LoginUseCaseTest {
 
     private val fakeUserPreferences = FakeUserPreferencesRepository()
+    private lateinit var fakeAuthApi: FakeAuthApi
+    private lateinit var authRepository: AuthRepositoryImpl
+
+    @Before
+    fun setUp() {
+        fakeAuthApi = FakeAuthApi(simulatedDelayMs = 0L)
+        authRepository = AuthRepositoryImpl(fakeAuthApi)
+    }
 
     @Test
     fun invoke_whenOffline_throwsOfflineActionNotAllowed() = runTest {
         val fakeNetwork = FakeNetworkManager(online = false)
-        val useCase = LoginUseCaseImpl(fakeNetwork, fakeUserPreferences)
+        val useCase = LoginUseCaseImpl(authRepository, fakeNetwork, fakeUserPreferences)
 
         var thrown = false
         try {
-            useCase("student@university.edu", "password123")
+            useCase(Constants.Auth.DEFAULT_EMAIL, Constants.Auth.DEFAULT_PASSWORD)
         } catch (e: AppError.BusinessError.OfflineActionNotAllowed) {
             thrown = true
         }
@@ -33,11 +45,11 @@ class LoginUseCaseTest {
     @Test
     fun invoke_withInvalidEmailFormat_throwsInvalidEmail() = runTest {
         val fakeNetwork = FakeNetworkManager(online = true)
-        val useCase = LoginUseCaseImpl(fakeNetwork, fakeUserPreferences)
+        val useCase = LoginUseCaseImpl(authRepository, fakeNetwork, fakeUserPreferences)
 
         var thrown = false
         try {
-            useCase("invalid-format", "password123")
+            useCase("invalid-format", Constants.Auth.DEFAULT_PASSWORD)
         } catch (e: AppError.BusinessError.InvalidEmail) {
             thrown = true
         }
@@ -48,11 +60,11 @@ class LoginUseCaseTest {
     @Test
     fun invoke_withShortPassword_throwsShortPassword() = runTest {
         val fakeNetwork = FakeNetworkManager(online = true)
-        val useCase = LoginUseCaseImpl(fakeNetwork, fakeUserPreferences)
+        val useCase = LoginUseCaseImpl(authRepository, fakeNetwork, fakeUserPreferences)
 
         var thrown = false
         try {
-            useCase("student@university.edu", "123")
+            useCase(Constants.Auth.DEFAULT_EMAIL, "123")
         } catch (e: AppError.BusinessError.ShortPassword) {
             thrown = true
         }
@@ -61,14 +73,30 @@ class LoginUseCaseTest {
     }
 
     @Test
-    fun invoke_withWrongCredentials_throwsInvalidCredentials() = runTest {
+    fun invoke_withWrongCredentials_throwsInvalidCredentialsFromApi() = runTest {
         val fakeNetwork = FakeNetworkManager(online = true)
-        val useCase = LoginUseCaseImpl(fakeNetwork, fakeUserPreferences)
+        val useCase = LoginUseCaseImpl(authRepository, fakeNetwork, fakeUserPreferences)
 
         var thrown = false
         try {
-            useCase("other@university.edu", "password123")
+            useCase("wrong@university.edu", "wrongpassword")
         } catch (e: AppError.BusinessError.InvalidCredentials) {
+            thrown = true
+        }
+        assertTrue(thrown)
+        assertFalse(fakeUserPreferences.isLoggedIn.first())
+    }
+
+    @Test
+    fun invoke_whenApiServerUnavailable_throwsNetworkError() = runTest {
+        fakeAuthApi.shouldSimulateError = true
+        val fakeNetwork = FakeNetworkManager(online = true)
+        val useCase = LoginUseCaseImpl(authRepository, fakeNetwork, fakeUserPreferences)
+
+        var thrown = false
+        try {
+            useCase(Constants.Auth.DEFAULT_EMAIL, Constants.Auth.DEFAULT_PASSWORD)
+        } catch (e: AppError.NetworkError.ServerUnavailable) {
             thrown = true
         }
         assertTrue(thrown)
@@ -78,9 +106,9 @@ class LoginUseCaseTest {
     @Test
     fun invoke_withCorrectCredentials_succeedsAndPersistsLoginState() = runTest {
         val fakeNetwork = FakeNetworkManager(online = true)
-        val useCase = LoginUseCaseImpl(fakeNetwork, fakeUserPreferences)
+        val useCase = LoginUseCaseImpl(authRepository, fakeNetwork, fakeUserPreferences)
 
-        useCase("student@university.edu", "password123")
+        useCase(Constants.Auth.DEFAULT_EMAIL, Constants.Auth.DEFAULT_PASSWORD)
 
         assertTrue(fakeUserPreferences.isLoggedIn.first())
     }

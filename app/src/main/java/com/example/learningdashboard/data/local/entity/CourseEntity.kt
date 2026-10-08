@@ -3,8 +3,9 @@ package com.example.learningdashboard.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.learningdashboard.domain.model.Course
+import com.example.learningdashboard.util.Constants
 
-@Entity(tableName = "courses")
+@Entity(tableName = Constants.Database.TABLE_COURSES)
 data class CourseEntity(
     @PrimaryKey val id: Long,
     val title: String,

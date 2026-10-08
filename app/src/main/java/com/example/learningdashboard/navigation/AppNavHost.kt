@@ -22,13 +22,14 @@ import com.example.learningdashboard.presentation.login.LoginRoute
 import com.example.learningdashboard.presentation.viewmodel.CourseDetailsViewModel
 import com.example.learningdashboard.presentation.viewmodel.CourseListViewModel
 import com.example.learningdashboard.presentation.viewmodel.LoginViewModel
+import com.example.learningdashboard.util.Constants
 
 object AppRoutes {
-    const val LOGIN = "login"
-    const val COURSES = "courses"
-    const val COURSE_DETAILS = "course/{courseId}"
+    const val LOGIN = Constants.Navigation.ROUTE_LOGIN
+    const val COURSES = Constants.Navigation.ROUTE_COURSES
+    const val COURSE_DETAILS = Constants.Navigation.ROUTE_COURSE_DETAILS
 
-    fun courseDetails(courseId: Long): String = "course/$courseId"
+    fun courseDetails(courseId: Long): String = Constants.Navigation.courseDetailsRoute(courseId)
 }
 
 @Composable
@@ -104,10 +105,10 @@ fun AppNavHost(
         composable(
             route = AppRoutes.COURSE_DETAILS,
             arguments = listOf(
-                navArgument("courseId") { type = NavType.LongType }
+                navArgument(Constants.Navigation.ARG_COURSE_ID) { type = NavType.LongType }
             )
         ) { backStackEntry ->
-            val courseId = backStackEntry.arguments?.getLong("courseId") ?: return@composable
+            val courseId = backStackEntry.arguments?.getLong(Constants.Navigation.ARG_COURSE_ID) ?: return@composable
             val courseDetailsViewModel: CourseDetailsViewModel = viewModel(
                 factory = CourseDetailsViewModel.provideFactory(
                     courseId = courseId,

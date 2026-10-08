@@ -1,10 +1,13 @@
 package com.example.learningdashboard.presentation.viewmodel
 
+import com.example.learningdashboard.data.remote.FakeAuthApi
+import com.example.learningdashboard.data.repository.AuthRepositoryImpl
 import com.example.learningdashboard.data.util.NetworkManager
 import com.example.learningdashboard.domain.repository.UserPreferencesRepository
 import com.example.learningdashboard.domain.usecase.LoginUseCaseImpl
 import com.example.learningdashboard.domain.usecase.ObserveNetworkStatusUseCaseImpl
 import com.example.learningdashboard.domain.usecase.ValidateCredentialsUseCaseImpl
+import com.example.learningdashboard.util.Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -30,15 +33,19 @@ class LoginViewModelTest {
     private val fakeNetwork = FakeTestNetworkManager(initialOnline = true)
     private val fakeUserPreferences = FakeUserPreferencesRepository()
     private val validateCredentialsUseCase = ValidateCredentialsUseCaseImpl()
+    private lateinit var fakeAuthApi: FakeAuthApi
+    private lateinit var authRepository: AuthRepositoryImpl
     private lateinit var viewModel: LoginViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        fakeAuthApi = FakeAuthApi(simulatedDelayMs = 0L)
+        authRepository = AuthRepositoryImpl(fakeAuthApi)
         val loginUseCase = LoginUseCaseImpl(
+            authRepository = authRepository,
             networkManager = fakeNetwork,
-            userPreferencesRepository = fakeUserPreferences,
-            simulatedDelayMs = 0L
+            userPreferencesRepository = fakeUserPreferences
         )
         val observeNetworkUseCase = ObserveNetworkStatusUseCaseImpl(fakeNetwork)
 

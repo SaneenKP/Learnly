@@ -8,10 +8,11 @@ import com.example.learningdashboard.data.local.dao.CourseDao
 import com.example.learningdashboard.data.local.dao.LessonDao
 import com.example.learningdashboard.data.local.entity.CourseEntity
 import com.example.learningdashboard.data.local.entity.LessonEntity
+import com.example.learningdashboard.util.Constants
 
 @Database(
     entities = [CourseEntity::class, LessonEntity::class],
-    version = 1,
+    version = Constants.Database.DATABASE_VERSION,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,8 +21,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun lessonDao(): LessonDao
 
     companion object {
-        private const val DATABASE_NAME = "learning_dashboard.db"
-
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -30,7 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    DATABASE_NAME
+                    Constants.Database.DATABASE_NAME
                 ).fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { INSTANCE = it }
