@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "Python Programming",
+    "category": "Programming",
+    "instructorId": 101,
+    "instructorName": "John Smith",
+    "totalLessons": 20
+  },
+  {
+    "id": 2,
+    "title": "Generative AI",
+    "category": "Artificial Intelligence",
+    "instructorId": 102,
+    "instructorName": "Sarah Williams",
+    "totalLessons": 16
+  },
+  {
+    "id": 3,
+    "title": "Full Stack Development",
+    "category": "Web Development",
+    "instructorId": 103,
+    "instructorName": "David Brown",
+    "totalLessons": 28
+  }
+]
