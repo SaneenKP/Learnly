@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -54,6 +55,8 @@ fun LoginRoute(
         state = state,
         onEmailChange = viewModel::onEmailChanged,
         onPasswordChange = viewModel::onPasswordChanged,
+        onEmailFocusChange = viewModel::onEmailFocusChanged,
+        onPasswordFocusChange = viewModel::onPasswordFocusChanged,
         onLoginClick = viewModel::login,
         modifier = modifier
     )
@@ -64,6 +67,8 @@ fun LoginScreen(
     state: LoginUiState,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
+    onEmailFocusChange: (Boolean) -> Unit = {},
+    onPasswordFocusChange: (Boolean) -> Unit = {},
     onLoginClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -149,17 +154,17 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Email Field with Validation
+        // Email Field with Validation (only visible after unfocused or submitted)
         OutlinedTextField(
             value = state.email,
             onValueChange = onEmailChange,
             label = { Text("Email") },
             singleLine = true,
-            isError = state.emailError != null,
+            isError = state.displayEmailError != null,
             supportingText = {
-                if (state.emailError != null) {
+                state.displayEmailError?.let { errorText ->
                     Text(
-                        text = state.emailError,
+                        text = errorText,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -170,23 +175,27 @@ fun LoginScreen(
                 keyboardType = KeyboardType.Email,
                 imeAction = ImeAction.Next
             ),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    onEmailFocusChange(focusState.isFocused)
+                },
             enabled = !state.isLoading
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Password Field with Validation
+        // Password Field with Validation (only visible after unfocused or submitted)
         OutlinedTextField(
             value = state.password,
             onValueChange = onPasswordChange,
             label = { Text("Password") },
             singleLine = true,
-            isError = state.passwordError != null,
+            isError = state.displayPasswordError != null,
             supportingText = {
-                if (state.passwordError != null) {
+                state.displayPasswordError?.let { errorText ->
                     Text(
-                        text = state.passwordError,
+                        text = errorText,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -206,7 +215,11 @@ fun LoginScreen(
                     }
                 }
             ),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    onPasswordFocusChange(focusState.isFocused)
+                },
             enabled = !state.isLoading
         )
 

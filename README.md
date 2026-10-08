@@ -56,6 +56,15 @@ The application guarantees offline resilience through:
   - If Room already contains courses from a prior session, they are displayed instantly without touching the network.
 - **Graceful Refresh Failure**:
   - When the user manually triggers a refresh while offline, existing Room data is preserved, and a non-blocking message informs the user they are in offline mode.
+- **DataStore Login State Persistence**:
+  - Uses Jetpack Preferences DataStore (`UserPreferencesRepository`) to persist user session state.
+  - When the app is launched, `AppNavHost` checks DataStore: if the user was previously logged in, it directly displays `AppRoutes.COURSES`.
+  - When the user logs out, DataStore resets `isLoggedIn = false`, and subsequent app launches direct to `AppRoutes.LOGIN`.
+- **Initial API Loading on Course Screen**:
+  - The Course Dashboard displays a full-screen loading indicator during initial synchronization from the API before rendering course cards.
+- **Focus-Based Form Validation**:
+  - Email and password validation errors are suppressed while fields are actively focused so typing is uninterrupted.
+  - Errors are displayed dynamically only after a field loses focus or when a login submission is attempted.
 - **Offline Progress Updates**:
   - Marking lessons as completed writes immediately to Room (`lessonDao.updateLessonCompletion`). The `combine` Flow between courses and lessons recalculates course progress dynamically and pushes new state to the UI without requiring network connectivity.
 - **Logout & Database Erasure**:

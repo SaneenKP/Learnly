@@ -9,8 +9,6 @@ import com.example.learningdashboard.domain.usecase.LogoutUseCase
 import com.example.learningdashboard.domain.usecase.RefreshCoursesUseCase
 import com.example.learningdashboard.presentation.courses.CourseListUiState
 import com.example.learningdashboard.presentation.error.toUiError
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,19 +19,22 @@ import kotlinx.coroutines.launch
 class CourseListViewModel(
     private val getCoursesUseCase: GetCoursesUseCase,
     private val refreshCoursesUseCase: RefreshCoursesUseCase,
-    private val logoutUseCase: LogoutUseCase,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val logoutUseCase: LogoutUseCase
 ) : ViewModel() {
 
+    private val _isInitialLoading = MutableStateFlow(true)
     private val _isRefreshing = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<CourseListUiState> = combine(
         getCoursesUseCase(),
+        _isInitialLoading,
         _isRefreshing,
         _errorMessage
-    ) { courses, isRefreshing, error ->
+    ) { courses, isInitialLoading, isRefreshing, error ->
         when {
+            // Show initial loading while fetching details from the API on course screen
+            isInitialLoading -> CourseListUiState.Loading
             courses.isNotEmpty() -> {
                 CourseListUiState.Success(
                     courses = courses,
@@ -54,17 +55,21 @@ class CourseListViewModel(
     )
 
     init {
-        // Initial load: fetches from DB first. If empty, UseCase attempts remote fetch if online.
-        loadCourses(forceRefresh = false)
+        // Initial load: displays initial loading indicator while fetching details from the API
+        loadCourses(isInitial = true, forceRefresh = false)
     }
 
     fun refresh() {
-        loadCourses(forceRefresh = true)
+        loadCourses(isInitial = false, forceRefresh = true)
     }
 
-    private fun loadCourses(forceRefresh: Boolean) {
-        viewModelScope.launch(dispatcher) {
-            _isRefreshing.value = true
+    private fun loadCourses(isInitial: Boolean, forceRefresh: Boolean) {
+        viewModelScope.launch {
+            if (isInitial) {
+                _isInitialLoading.value = true
+            } else {
+                _isRefreshing.value = true
+            }
             _errorMessage.value = null
 
             try {
@@ -74,16 +79,17 @@ class CourseListViewModel(
             } catch (e: Exception) {
                 _errorMessage.value = "Failed to refresh courses: ${e.message}"
             } finally {
+                _isInitialLoading.value = false
                 _isRefreshing.value = false
             }
         }
     }
 
     /**
-     * Erases the entire Room database via domain LogoutUseCase and invokes navigation callback.
+     * Erases the entire Room database and updates DataStore login state via domain LogoutUseCase.
      */
     fun logout(onLoggedOut: () -> Unit) {
-        viewModelScope.launch(dispatcher) {
+        viewModelScope.launch {
             try {
                 logoutUseCase()
             } catch (_: Exception) {
@@ -96,16 +102,14 @@ class CourseListViewModel(
         fun provideFactory(
             getCoursesUseCase: GetCoursesUseCase,
             refreshCoursesUseCase: RefreshCoursesUseCase,
-            logoutUseCase: LogoutUseCase,
-            dispatcher: CoroutineDispatcher = Dispatchers.Main
+            logoutUseCase: LogoutUseCase
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 return CourseListViewModel(
                     getCoursesUseCase = getCoursesUseCase,
                     refreshCoursesUseCase = refreshCoursesUseCase,
-                    logoutUseCase = logoutUseCase,
-                    dispatcher = dispatcher
+                    logoutUseCase = logoutUseCase
                 ) as T
             }
         }

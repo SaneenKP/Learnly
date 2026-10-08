@@ -3,7 +3,6 @@ package com.example.learningdashboard.domain.usecase
 import com.example.learningdashboard.data.util.NetworkManager
 import com.example.learningdashboard.domain.error.AppError
 import com.example.learningdashboard.domain.repository.CourseRepository
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -14,11 +13,10 @@ interface RefreshCourseDetailsUseCase {
 
 class RefreshCourseDetailsUseCaseImpl(
     private val repository: CourseRepository,
-    private val networkManager: NetworkManager,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val networkManager: NetworkManager
 ) : RefreshCourseDetailsUseCase {
 
-    override suspend fun invoke(courseId: Long, forceRefresh: Boolean) = withContext(ioDispatcher) {
+    override suspend fun invoke(courseId: Long, forceRefresh: Boolean) = withContext(Dispatchers.IO) {
         val cachedCount = repository.getLessonCount(courseId)
 
         // DB-First check

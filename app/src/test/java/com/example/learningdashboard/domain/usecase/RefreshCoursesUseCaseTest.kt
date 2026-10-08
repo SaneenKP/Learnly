@@ -7,7 +7,6 @@ import com.example.learningdashboard.domain.model.Lesson
 import com.example.learningdashboard.domain.repository.CourseRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -15,13 +14,11 @@ import org.junit.Test
 
 class RefreshCoursesUseCaseTest {
 
-    private val testDispatcher = StandardTestDispatcher()
-
     @Test
-    fun invoke_whenDatabaseHasCachedCourses_doesNotFetchFromRemote() = runTest(testDispatcher) {
+    fun invoke_whenDatabaseHasCachedCourses_doesNotFetchFromRemote() = runTest {
         val fakeRepo = FakeCourseRepository(cachedCount = 3)
         val fakeNetwork = FakeNetworkManager(online = true)
-        val useCase = RefreshCoursesUseCaseImpl(fakeRepo, fakeNetwork, testDispatcher)
+        val useCase = RefreshCoursesUseCaseImpl(fakeRepo, fakeNetwork)
 
         useCase(forceRefresh = false)
 
@@ -29,10 +26,10 @@ class RefreshCoursesUseCaseTest {
     }
 
     @Test
-    fun invoke_whenDatabaseEmptyAndOnline_fetchesFromRemote() = runTest(testDispatcher) {
+    fun invoke_whenDatabaseEmptyAndOnline_fetchesFromRemote() = runTest {
         val fakeRepo = FakeCourseRepository(cachedCount = 0)
         val fakeNetwork = FakeNetworkManager(online = true)
-        val useCase = RefreshCoursesUseCaseImpl(fakeRepo, fakeNetwork, testDispatcher)
+        val useCase = RefreshCoursesUseCaseImpl(fakeRepo, fakeNetwork)
 
         useCase(forceRefresh = false)
 
@@ -40,10 +37,10 @@ class RefreshCoursesUseCaseTest {
     }
 
     @Test
-    fun invoke_whenDatabaseEmptyAndOffline_doesNotFetchFromRemoteAndReturnsGracefully() = runTest(testDispatcher) {
+    fun invoke_whenDatabaseEmptyAndOffline_doesNotFetchFromRemoteAndReturnsGracefully() = runTest {
         val fakeRepo = FakeCourseRepository(cachedCount = 0)
         val fakeNetwork = FakeNetworkManager(online = false)
-        val useCase = RefreshCoursesUseCaseImpl(fakeRepo, fakeNetwork, testDispatcher)
+        val useCase = RefreshCoursesUseCaseImpl(fakeRepo, fakeNetwork)
 
         useCase(forceRefresh = false)
 
@@ -51,10 +48,10 @@ class RefreshCoursesUseCaseTest {
     }
 
     @Test
-    fun invoke_whenOfflineAndForceRefresh_throwsNoInternetError() = runTest(testDispatcher) {
+    fun invoke_whenOfflineAndForceRefresh_throwsNoInternetError() = runTest {
         val fakeRepo = FakeCourseRepository(cachedCount = 2)
         val fakeNetwork = FakeNetworkManager(online = false)
-        val useCase = RefreshCoursesUseCaseImpl(fakeRepo, fakeNetwork, testDispatcher)
+        val useCase = RefreshCoursesUseCaseImpl(fakeRepo, fakeNetwork)
 
         var thrown = false
         try {

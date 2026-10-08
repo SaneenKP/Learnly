@@ -1,6 +1,7 @@
 package com.example.learningdashboard.presentation.viewmodel
 
 import com.example.learningdashboard.data.util.NetworkManager
+import com.example.learningdashboard.domain.repository.UserPreferencesRepository
 import com.example.learningdashboard.domain.usecase.LoginUseCaseImpl
 import com.example.learningdashboard.domain.usecase.ObserveNetworkStatusUseCaseImpl
 import com.example.learningdashboard.domain.usecase.ValidateCredentialsUseCaseImpl
@@ -17,6 +18,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -26,6 +28,7 @@ class LoginViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val fakeNetwork = FakeTestNetworkManager(initialOnline = true)
+    private val fakeUserPreferences = FakeUserPreferencesRepository()
     private val validateCredentialsUseCase = ValidateCredentialsUseCaseImpl()
     private lateinit var viewModel: LoginViewModel
 
@@ -34,16 +37,15 @@ class LoginViewModelTest {
         Dispatchers.setMain(testDispatcher)
         val loginUseCase = LoginUseCaseImpl(
             networkManager = fakeNetwork,
-            validateCredentialsUseCase = validateCredentialsUseCase,
-            ioDispatcher = testDispatcher
+            userPreferencesRepository = fakeUserPreferences,
+            simulatedDelayMs = 0L
         )
         val observeNetworkUseCase = ObserveNetworkStatusUseCaseImpl(fakeNetwork)
 
         viewModel = LoginViewModel(
             loginUseCase = loginUseCase,
             validateCredentialsUseCase = validateCredentialsUseCase,
-            observeNetworkStatusUseCase = observeNetworkUseCase,
-            dispatcher = testDispatcher
+            observeNetworkStatusUseCase = observeNetworkUseCase
         )
     }
 
@@ -61,7 +63,7 @@ class LoginViewModelTest {
         assertFalse(viewModel.uiState.value.canSubmit)
 
         viewModel.login()
-        advanceUntilIdle()
+        waitForLoginCompletion()
 
         assertTrue(viewModel.uiState.value.errorMessage?.contains("Internet connection required") == true)
         assertFalse(viewModel.uiState.value.isSuccess)
@@ -76,6 +78,8 @@ class LoginViewModelTest {
 
         assertEquals("Email cannot be empty", viewModel.uiState.value.emailError)
         assertEquals("Password cannot be empty", viewModel.uiState.value.passwordError)
+        assertEquals("Email cannot be empty", viewModel.uiState.value.displayEmailError)
+        assertEquals("Password cannot be empty", viewModel.uiState.value.displayPasswordError)
         assertFalse(viewModel.uiState.value.isSuccess)
     }
 
@@ -87,6 +91,7 @@ class LoginViewModelTest {
         advanceUntilIdle()
 
         assertNotNull(viewModel.uiState.value.emailError)
+        assertNotNull(viewModel.uiState.value.displayEmailError)
         assertFalse(viewModel.uiState.value.isSuccess)
     }
 
@@ -98,6 +103,7 @@ class LoginViewModelTest {
         advanceUntilIdle()
 
         assertEquals("Password must be at least 6 characters", viewModel.uiState.value.passwordError)
+        assertEquals("Password must be at least 6 characters", viewModel.uiState.value.displayPasswordError)
         assertFalse(viewModel.uiState.value.isSuccess)
     }
 
@@ -107,7 +113,7 @@ class LoginViewModelTest {
         viewModel.onPasswordChanged("wrongpassword")
         viewModel.login()
 
-        advanceUntilIdle()
+        waitForLoginCompletion()
 
         assertTrue(viewModel.uiState.value.errorMessage?.contains("Invalid credentials") == true)
         assertFalse(viewModel.uiState.value.isSuccess)
@@ -119,44 +125,73 @@ class LoginViewModelTest {
         viewModel.onPasswordChanged("password123")
         viewModel.login()
 
-        advanceUntilIdle()
+        waitForLoginCompletion()
 
         assertTrue(viewModel.uiState.value.isSuccess)
         assertEquals(null, viewModel.uiState.value.errorMessage)
     }
 
-    @Test
-    fun onEmailChanged_updatesValidationErrorDynamically() {
-        assertEquals(null, viewModel.uiState.value.emailError)
-
-        viewModel.onEmailChanged("invalid-email")
-        assertEquals(
-            "Please enter a valid email address (e.g. user@domain.com)",
-            viewModel.uiState.value.emailError
-        )
-
-        viewModel.onEmailChanged("user@example.com")
-        assertEquals(null, viewModel.uiState.value.emailError)
-
-        viewModel.onEmailChanged("")
-        assertEquals("Email cannot be empty", viewModel.uiState.value.emailError)
+    private fun waitForLoginCompletion() {
+        testDispatcher.scheduler.advanceUntilIdle()
+        var count = 0
+        while (viewModel.uiState.value.isLoading && count < 50) {
+            Thread.sleep(10)
+            testDispatcher.scheduler.advanceUntilIdle()
+            count++
+        }
     }
 
     @Test
-    fun onPasswordChanged_updatesValidationErrorDynamically() {
-        assertEquals(null, viewModel.uiState.value.passwordError)
+    fun validationErrors_onlyDisplayedAfterFieldsAreUnfocused() {
+        // Initially no errors shown
+        assertNull(viewModel.uiState.value.displayEmailError)
+        assertNull(viewModel.uiState.value.displayPasswordError)
 
-        viewModel.onPasswordChanged("123")
+        // 1. User focuses on email and types invalid email
+        viewModel.onEmailFocusChanged(isFocused = true)
+        viewModel.onEmailChanged("invalid")
+
+        // While email field is focused, error is suppressed
+        assertNotNull(viewModel.uiState.value.emailError)
+        assertNull(viewModel.uiState.value.displayEmailError)
+
+        // 2. User unfocuses email field
+        viewModel.onEmailFocusChanged(isFocused = false)
+
+        // Error is now visible after field lost focus
         assertEquals(
-            "Password must be at least 6 characters",
-            viewModel.uiState.value.passwordError
+            "Please enter a valid email address (e.g. user@domain.com)",
+            viewModel.uiState.value.displayEmailError
         )
 
-        viewModel.onPasswordChanged("123456")
-        assertEquals(null, viewModel.uiState.value.passwordError)
+        // 3. User focuses on password and types short password
+        viewModel.onPasswordFocusChanged(isFocused = true)
+        viewModel.onPasswordChanged("123")
 
-        viewModel.onPasswordChanged("")
-        assertEquals("Password cannot be empty", viewModel.uiState.value.passwordError)
+        // While password field is focused, error is suppressed
+        assertNotNull(viewModel.uiState.value.passwordError)
+        assertNull(viewModel.uiState.value.displayPasswordError)
+
+        // 4. User unfocuses password field
+        viewModel.onPasswordFocusChanged(isFocused = false)
+
+        // Error is now visible after field lost focus
+        assertEquals(
+            "Password must be at least 6 characters",
+            viewModel.uiState.value.displayPasswordError
+        )
+
+        // 5. User refocuses and types valid values
+        viewModel.onEmailFocusChanged(isFocused = true)
+        viewModel.onEmailChanged("student@university.edu")
+        viewModel.onEmailFocusChanged(isFocused = false)
+
+        viewModel.onPasswordFocusChanged(isFocused = true)
+        viewModel.onPasswordChanged("password123")
+        viewModel.onPasswordFocusChanged(isFocused = false)
+
+        assertNull(viewModel.uiState.value.displayEmailError)
+        assertNull(viewModel.uiState.value.displayPasswordError)
     }
 
     @Test
@@ -183,6 +218,15 @@ class LoginViewModelTest {
 
         fun setOnline(online: Boolean) {
             _isOnline.value = online
+        }
+    }
+
+    private class FakeUserPreferencesRepository : UserPreferencesRepository {
+        private val _isLoggedIn = MutableStateFlow(false)
+        override val isLoggedIn: Flow<Boolean> = _isLoggedIn
+
+        override suspend fun setLoggedIn(isLoggedIn: Boolean) {
+            _isLoggedIn.value = isLoggedIn
         }
     }
 }

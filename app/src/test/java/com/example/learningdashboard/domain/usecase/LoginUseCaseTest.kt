@@ -2,22 +2,23 @@ package com.example.learningdashboard.domain.usecase
 
 import com.example.learningdashboard.data.util.NetworkManager
 import com.example.learningdashboard.domain.error.AppError
+import com.example.learningdashboard.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LoginUseCaseTest {
 
-    private val testDispatcher = StandardTestDispatcher()
-    private val validateCredentialsUseCase = ValidateCredentialsUseCaseImpl()
+    private val fakeUserPreferences = FakeUserPreferencesRepository()
 
     @Test
-    fun invoke_whenOffline_throwsOfflineActionNotAllowed() = runTest(testDispatcher) {
+    fun invoke_whenOffline_throwsOfflineActionNotAllowed() = runTest {
         val fakeNetwork = FakeNetworkManager(online = false)
-        val useCase = LoginUseCaseImpl(fakeNetwork, validateCredentialsUseCase, testDispatcher)
+        val useCase = LoginUseCaseImpl(fakeNetwork, fakeUserPreferences)
 
         var thrown = false
         try {
@@ -26,12 +27,13 @@ class LoginUseCaseTest {
             thrown = true
         }
         assertTrue(thrown)
+        assertFalse(fakeUserPreferences.isLoggedIn.first())
     }
 
     @Test
-    fun invoke_withInvalidEmailFormat_throwsInvalidEmail() = runTest(testDispatcher) {
+    fun invoke_withInvalidEmailFormat_throwsInvalidEmail() = runTest {
         val fakeNetwork = FakeNetworkManager(online = true)
-        val useCase = LoginUseCaseImpl(fakeNetwork, validateCredentialsUseCase, testDispatcher)
+        val useCase = LoginUseCaseImpl(fakeNetwork, fakeUserPreferences)
 
         var thrown = false
         try {
@@ -40,12 +42,13 @@ class LoginUseCaseTest {
             thrown = true
         }
         assertTrue(thrown)
+        assertFalse(fakeUserPreferences.isLoggedIn.first())
     }
 
     @Test
-    fun invoke_withShortPassword_throwsShortPassword() = runTest(testDispatcher) {
+    fun invoke_withShortPassword_throwsShortPassword() = runTest {
         val fakeNetwork = FakeNetworkManager(online = true)
-        val useCase = LoginUseCaseImpl(fakeNetwork, validateCredentialsUseCase, testDispatcher)
+        val useCase = LoginUseCaseImpl(fakeNetwork, fakeUserPreferences)
 
         var thrown = false
         try {
@@ -54,12 +57,13 @@ class LoginUseCaseTest {
             thrown = true
         }
         assertTrue(thrown)
+        assertFalse(fakeUserPreferences.isLoggedIn.first())
     }
 
     @Test
-    fun invoke_withWrongCredentials_throwsInvalidCredentials() = runTest(testDispatcher) {
+    fun invoke_withWrongCredentials_throwsInvalidCredentials() = runTest {
         val fakeNetwork = FakeNetworkManager(online = true)
-        val useCase = LoginUseCaseImpl(fakeNetwork, validateCredentialsUseCase, testDispatcher)
+        val useCase = LoginUseCaseImpl(fakeNetwork, fakeUserPreferences)
 
         var thrown = false
         try {
@@ -68,19 +72,30 @@ class LoginUseCaseTest {
             thrown = true
         }
         assertTrue(thrown)
+        assertFalse(fakeUserPreferences.isLoggedIn.first())
     }
 
     @Test
-    fun invoke_withCorrectCredentials_succeedsWithoutException() = runTest(testDispatcher) {
+    fun invoke_withCorrectCredentials_succeedsAndPersistsLoginState() = runTest {
         val fakeNetwork = FakeNetworkManager(online = true)
-        val useCase = LoginUseCaseImpl(fakeNetwork, validateCredentialsUseCase, testDispatcher)
+        val useCase = LoginUseCaseImpl(fakeNetwork, fakeUserPreferences)
 
-        // Should complete without throwing any exception
         useCase("student@university.edu", "password123")
+
+        assertTrue(fakeUserPreferences.isLoggedIn.first())
     }
 
     private class FakeNetworkManager(private val online: Boolean) : NetworkManager {
         override val isOnline: Flow<Boolean> = MutableStateFlow(online)
         override fun isCurrentlyOnline(): Boolean = online
+    }
+
+    private class FakeUserPreferencesRepository : UserPreferencesRepository {
+        private val _isLoggedIn = MutableStateFlow(false)
+        override val isLoggedIn: Flow<Boolean> = _isLoggedIn
+
+        override suspend fun setLoggedIn(isLoggedIn: Boolean) {
+            _isLoggedIn.value = isLoggedIn
+        }
     }
 }

@@ -1,7 +1,13 @@
 package com.example.learningdashboard.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -31,9 +37,25 @@ fun AppNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController()
 ) {
+    val isUserLoggedIn by appContainer.getAuthStateUseCase()
+        .collectAsStateWithLifecycle(initialValue = null)
+
+    // Wait until DataStore emits stored login state to determine initial startDestination
+    if (isUserLoggedIn == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    val startDestination = if (isUserLoggedIn == true) AppRoutes.COURSES else AppRoutes.LOGIN
+
     NavHost(
         navController = navController,
-        startDestination = AppRoutes.LOGIN,
+        startDestination = startDestination,
         modifier = modifier
     ) {
         composable(AppRoutes.LOGIN) {

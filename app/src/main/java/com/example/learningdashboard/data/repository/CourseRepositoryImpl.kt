@@ -8,9 +8,12 @@ import com.example.learningdashboard.domain.model.Course
 import com.example.learningdashboard.domain.model.Lesson
 import com.example.learningdashboard.domain.repository.CourseRepository
 import com.example.learningdashboard.domain.util.ProgressCalculator
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 class CourseRepositoryImpl(
     private val courseDao: CourseDao,
@@ -34,7 +37,7 @@ class CourseRepositoryImpl(
                     progress = progress
                 )
             }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     override fun observeCourse(courseId: Long): Flow<Course?> {
@@ -52,32 +55,32 @@ class CourseRepositoryImpl(
                     progress = progress
                 )
             }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     override fun observeLessons(courseId: Long): Flow<List<Lesson>> {
         return lessonDao.observeLessons(courseId).map { entities ->
             entities.map { it.toDomain() }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
-    override suspend fun getCourseCount(): Int {
-        return try {
+    override suspend fun getCourseCount(): Int = withContext(Dispatchers.IO) {
+        try {
             courseDao.getCourseCount()
         } catch (e: Exception) {
             throw AppError.DataError.DatabaseError("Failed to query course count", e)
         }
     }
 
-    override suspend fun getLessonCount(courseId: Long): Int {
-        return try {
+    override suspend fun getLessonCount(courseId: Long): Int = withContext(Dispatchers.IO) {
+        try {
             lessonDao.getLessonsForCourse(courseId).size
         } catch (e: Exception) {
             throw AppError.DataError.DatabaseError("Failed to query lesson count for course $courseId", e)
         }
     }
 
-    override suspend fun fetchAndStoreCourses() {
+    override suspend fun fetchAndStoreCourses() = withContext(Dispatchers.IO) {
         val remoteCourses = try {
             courseApi.getCourses()
         } catch (e: AppError.NetworkError) {
@@ -104,7 +107,7 @@ class CourseRepositoryImpl(
         }
     }
 
-    override suspend fun fetchAndStoreLessons(courseId: Long) {
+    override suspend fun fetchAndStoreLessons(courseId: Long) = withContext(Dispatchers.IO) {
         val remoteLessons = try {
             courseApi.getLessons(courseId)
         } catch (e: AppError.NetworkError) {
@@ -124,7 +127,7 @@ class CourseRepositoryImpl(
         courseId: Long,
         lessonId: Long,
         completed: Boolean
-    ) {
+    ) = withContext(Dispatchers.IO) {
         try {
             lessonDao.updateLessonCompletion(lessonId, completed)
         } catch (e: Exception) {
@@ -132,7 +135,7 @@ class CourseRepositoryImpl(
         }
     }
 
-    override suspend fun clearAllData() {
+    override suspend fun clearAllData() = withContext(Dispatchers.IO) {
         try {
             lessonDao.deleteAllLessons()
             courseDao.deleteAllCourses()

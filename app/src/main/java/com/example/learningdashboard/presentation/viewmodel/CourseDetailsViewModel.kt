@@ -9,8 +9,6 @@ import com.example.learningdashboard.domain.usecase.RefreshCourseDetailsUseCase
 import com.example.learningdashboard.domain.usecase.ToggleLessonCompletionUseCase
 import com.example.learningdashboard.presentation.details.CourseDetailsUiState
 import com.example.learningdashboard.presentation.error.toUiError
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,11 +20,10 @@ class CourseDetailsViewModel(
     private val courseId: Long,
     private val getCourseDetailsUseCase: GetCourseDetailsUseCase,
     private val refreshCourseDetailsUseCase: RefreshCourseDetailsUseCase,
-    private val toggleLessonCompletionUseCase: ToggleLessonCompletionUseCase,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val toggleLessonCompletionUseCase: ToggleLessonCompletionUseCase
 ) : ViewModel() {
 
-    private val _isLoading = MutableStateFlow(false)
+    private val _isLoading = MutableStateFlow(true)
     private val _errorMessage = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<CourseDetailsUiState> = combine(
@@ -36,11 +33,11 @@ class CourseDetailsViewModel(
         _errorMessage
     ) { course, lessons, isLoading, error ->
         when {
+            isLoading -> CourseDetailsUiState.Loading
             course != null -> CourseDetailsUiState.Success(
                 course = course,
                 lessons = lessons
             )
-            isLoading -> CourseDetailsUiState.Loading
             error != null -> CourseDetailsUiState.Error(error)
             else -> CourseDetailsUiState.Loading
         }
@@ -56,7 +53,7 @@ class CourseDetailsViewModel(
     }
 
     fun refresh(forceRefresh: Boolean = false) {
-        viewModelScope.launch(dispatcher) {
+        viewModelScope.launch {
             _isLoading.value = true
             try {
                 refreshCourseDetailsUseCase(courseId, forceRefresh = forceRefresh)
@@ -75,7 +72,7 @@ class CourseDetailsViewModel(
     }
 
     fun toggleLessonCompletion(lessonId: Long, completed: Boolean) {
-        viewModelScope.launch(dispatcher) {
+        viewModelScope.launch {
             try {
                 toggleLessonCompletionUseCase(courseId, lessonId, completed)
             } catch (e: AppError) {
@@ -91,8 +88,7 @@ class CourseDetailsViewModel(
             courseId: Long,
             getCourseDetailsUseCase: GetCourseDetailsUseCase,
             refreshCourseDetailsUseCase: RefreshCourseDetailsUseCase,
-            toggleLessonCompletionUseCase: ToggleLessonCompletionUseCase,
-            dispatcher: CoroutineDispatcher = Dispatchers.Main
+            toggleLessonCompletionUseCase: ToggleLessonCompletionUseCase
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -100,8 +96,7 @@ class CourseDetailsViewModel(
                     courseId = courseId,
                     getCourseDetailsUseCase = getCourseDetailsUseCase,
                     refreshCourseDetailsUseCase = refreshCourseDetailsUseCase,
-                    toggleLessonCompletionUseCase = toggleLessonCompletionUseCase,
-                    dispatcher = dispatcher
+                    toggleLessonCompletionUseCase = toggleLessonCompletionUseCase
                 ) as T
             }
         }

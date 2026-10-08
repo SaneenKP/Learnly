@@ -9,8 +9,6 @@ import com.example.learningdashboard.domain.usecase.ObserveNetworkStatusUseCase
 import com.example.learningdashboard.domain.usecase.ValidateCredentialsUseCase
 import com.example.learningdashboard.presentation.error.toUiError
 import com.example.learningdashboard.presentation.login.LoginUiState
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,8 +18,7 @@ import kotlinx.coroutines.launch
 class LoginViewModel(
     private val loginUseCase: LoginUseCase,
     private val validateCredentialsUseCase: ValidateCredentialsUseCase,
-    private val observeNetworkStatusUseCase: ObserveNetworkStatusUseCase,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val observeNetworkStatusUseCase: ObserveNetworkStatusUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -30,7 +27,7 @@ class LoginViewModel(
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch(dispatcher) {
+        viewModelScope.launch {
             observeNetworkStatusUseCase.isOnline.collect { online ->
                 _uiState.update { it.copy(isOnline = online) }
             }
@@ -66,17 +63,46 @@ class LoginViewModel(
     }
 
     /**
+     * Tracks email field focus to only display validation error when unfocused.
+     */
+    fun onEmailFocusChanged(isFocused: Boolean) {
+        _uiState.update { current ->
+            val wasFocused = current.emailHasBeenFocused || isFocused
+            val lostFocus = current.emailHasLostFocus || (current.emailHasBeenFocused && !isFocused)
+            current.copy(
+                isEmailFocused = isFocused,
+                emailHasBeenFocused = wasFocused,
+                emailHasLostFocus = lostFocus
+            )
+        }
+    }
+
+    /**
+     * Tracks password field focus to only display validation error when unfocused.
+     */
+    fun onPasswordFocusChanged(isFocused: Boolean) {
+        _uiState.update { current ->
+            val wasFocused = current.passwordHasBeenFocused || isFocused
+            val lostFocus = current.passwordHasLostFocus || (current.passwordHasBeenFocused && !isFocused)
+            current.copy(
+                isPasswordFocused = isFocused,
+                passwordHasBeenFocused = wasFocused,
+                passwordHasLostFocus = lostFocus
+            )
+        }
+    }
+
+    /**
      * Triggers login through the domain [LoginUseCase].
-     * Coroutines are explicitly scoped with the injected [dispatcher].
-     * Artificial delays and business credential validation reside in [LoginUseCase].
+     * Artificial delays, data calls and business credential validation execute on Dispatchers.IO inside [LoginUseCase].
      */
     fun login() {
         val current = _uiState.value
         val email = current.email.trim()
         val password = current.password
 
-        viewModelScope.launch(dispatcher) {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, submitAttempted = true) }
 
             try {
                 loginUseCase(email, password)
@@ -103,16 +129,14 @@ class LoginViewModel(
         fun provideFactory(
             loginUseCase: LoginUseCase,
             validateCredentialsUseCase: ValidateCredentialsUseCase,
-            observeNetworkStatusUseCase: ObserveNetworkStatusUseCase,
-            dispatcher: CoroutineDispatcher = Dispatchers.Main
+            observeNetworkStatusUseCase: ObserveNetworkStatusUseCase
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 return LoginViewModel(
                     loginUseCase = loginUseCase,
                     validateCredentialsUseCase = validateCredentialsUseCase,
-                    observeNetworkStatusUseCase = observeNetworkStatusUseCase,
-                    dispatcher = dispatcher
+                    observeNetworkStatusUseCase = observeNetworkStatusUseCase
                 ) as T
             }
         }

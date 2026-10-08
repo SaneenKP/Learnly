@@ -1,7 +1,7 @@
 package com.example.learningdashboard.domain.usecase
 
 import com.example.learningdashboard.domain.repository.CourseRepository
-import kotlinx.coroutines.CoroutineDispatcher
+import com.example.learningdashboard.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -11,10 +11,11 @@ interface LogoutUseCase {
 
 class LogoutUseCaseImpl(
     private val repository: CourseRepository,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : LogoutUseCase {
 
-    override suspend fun invoke() = withContext(ioDispatcher) {
+    override suspend fun invoke() = withContext(Dispatchers.IO) {
         repository.clearAllData()
+        userPreferencesRepository.setLoggedIn(false)
     }
 }
