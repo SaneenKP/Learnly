@@ -11,11 +11,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.learningdashboard.di.AppContainer
 import com.example.learningdashboard.presentation.courses.CourseListRoute
-import com.example.learningdashboard.presentation.courses.CourseListViewModel
 import com.example.learningdashboard.presentation.details.CourseDetailsRoute
-import com.example.learningdashboard.presentation.details.CourseDetailsViewModel
 import com.example.learningdashboard.presentation.login.LoginRoute
-import com.example.learningdashboard.presentation.login.LoginViewModel
+import com.example.learningdashboard.presentation.viewmodel.CourseDetailsViewModel
+import com.example.learningdashboard.presentation.viewmodel.CourseListViewModel
+import com.example.learningdashboard.presentation.viewmodel.LoginViewModel
 
 object AppRoutes {
     const val LOGIN = "login"
@@ -38,7 +38,11 @@ fun AppNavHost(
     ) {
         composable(AppRoutes.LOGIN) {
             val loginViewModel: LoginViewModel = viewModel(
-                factory = LoginViewModel.provideFactory(appContainer.networkManager)
+                factory = LoginViewModel.provideFactory(
+                    loginUseCase = appContainer.loginUseCase,
+                    validateCredentialsUseCase = appContainer.validateCredentialsUseCase,
+                    observeNetworkStatusUseCase = appContainer.observeNetworkStatusUseCase
+                )
             )
             LoginRoute(
                 viewModel = loginViewModel,
@@ -53,9 +57,13 @@ fun AppNavHost(
         }
 
         composable(AppRoutes.COURSES) {
-            val courseListViewModel: CourseListViewModel = viewModel {
-                CourseListViewModel(appContainer.courseRepository)
-            }
+            val courseListViewModel: CourseListViewModel = viewModel(
+                factory = CourseListViewModel.provideFactory(
+                    getCoursesUseCase = appContainer.getCoursesUseCase,
+                    refreshCoursesUseCase = appContainer.refreshCoursesUseCase,
+                    logoutUseCase = appContainer.logoutUseCase
+                )
+            )
             CourseListRoute(
                 viewModel = courseListViewModel,
                 onCourseClick = { courseId ->
@@ -79,7 +87,12 @@ fun AppNavHost(
         ) { backStackEntry ->
             val courseId = backStackEntry.arguments?.getLong("courseId") ?: return@composable
             val courseDetailsViewModel: CourseDetailsViewModel = viewModel(
-                factory = CourseDetailsViewModel.provideFactory(courseId, appContainer.courseRepository)
+                factory = CourseDetailsViewModel.provideFactory(
+                    courseId = courseId,
+                    getCourseDetailsUseCase = appContainer.getCourseDetailsUseCase,
+                    refreshCourseDetailsUseCase = appContainer.refreshCourseDetailsUseCase,
+                    toggleLessonCompletionUseCase = appContainer.toggleLessonCompletionUseCase
+                )
             )
             CourseDetailsRoute(
                 viewModel = courseDetailsViewModel,

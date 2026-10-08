@@ -37,6 +37,7 @@ import com.example.learningdashboard.presentation.components.CourseCard
 import com.example.learningdashboard.presentation.components.EmptyState
 import com.example.learningdashboard.presentation.components.ErrorState
 import com.example.learningdashboard.presentation.components.LoadingState
+import com.example.learningdashboard.presentation.viewmodel.CourseListViewModel
 
 @Composable
 fun CourseListRoute(

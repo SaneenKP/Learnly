@@ -4,51 +4,58 @@ import com.example.learningdashboard.domain.model.Course
 import com.example.learningdashboard.domain.model.Lesson
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Pure data repository interface responsible strictly for data access, persistence,
+ * and remote fetching. Business rules and orchestration are delegated to UseCases.
+ */
 interface CourseRepository {
 
     /**
-     * Observes the active list of courses as a continuous stream from the local database.
-     * Calculated progress and completed lesson counts are derived from persisted lessons.
+     * Observes the active list of courses as a continuous stream from local persistence.
      */
     fun observeCourses(): Flow<List<Course>>
 
     /**
-     * Observes a specific course by its identifier.
+     * Observes a single course by its ID.
      */
     fun observeCourse(courseId: Long): Flow<Course?>
 
     /**
-     * Observes the lessons for a given course.
+     * Observes the lessons belonging to a specific course.
      */
     fun observeLessons(courseId: Long): Flow<List<Lesson>>
 
     /**
-     * Refreshes course list adhering to DB-first policy:
-     * - If DB already contains courses and forceRefresh is false, no API call is performed.
-     * - If DB is empty, checks connectivity; if offline, API call is not performed.
-     * - If online (or forceRefresh), fetches from API and caches in Room.
+     * Returns the total count of courses cached locally.
      */
-    suspend fun refreshCourses(forceRefresh: Boolean = false)
+    suspend fun getCourseCount(): Int
 
     /**
-     * Refreshes lessons for a given course:
-     * - If DB already contains lessons for this course and forceRefresh is false, no API call is performed.
-     * - If empty and online, fetches from API and caches in Room.
+     * Returns the count of lessons cached locally for a specific course.
      */
-    suspend fun refreshLessons(courseId: Long, forceRefresh: Boolean = false)
+    suspend fun getLessonCount(courseId: Long): Int
 
     /**
-     * Marks a lesson as completed or incomplete.
-     * Persisted immediately to local storage to support offline workflows.
+     * Fetches courses and default lessons from remote API and persists them locally.
+     */
+    suspend fun fetchAndStoreCourses()
+
+    /**
+     * Fetches lessons for a specific course from remote API and persists them locally.
+     */
+    suspend fun fetchAndStoreLessons(courseId: Long)
+
+    /**
+     * Updates completion status of a lesson in local storage.
      */
     suspend fun markLessonCompleted(
         courseId: Long,
         lessonId: Long,
-        completed: Boolean = true
+        completed: Boolean
     )
 
     /**
-     * Erases the entire local database (used for logout).
+     * Erases all cached course and lesson data from local storage.
      */
     suspend fun clearAllData()
 }

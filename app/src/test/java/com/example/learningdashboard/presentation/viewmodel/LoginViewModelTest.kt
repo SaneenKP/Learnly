@@ -1,6 +1,9 @@
-package com.example.learningdashboard.presentation.login
+package com.example.learningdashboard.presentation.viewmodel
 
 import com.example.learningdashboard.data.util.NetworkManager
+import com.example.learningdashboard.domain.usecase.LoginUseCaseImpl
+import com.example.learningdashboard.domain.usecase.ObserveNetworkStatusUseCaseImpl
+import com.example.learningdashboard.domain.usecase.ValidateCredentialsUseCaseImpl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -23,12 +26,25 @@ class LoginViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val fakeNetwork = FakeTestNetworkManager(initialOnline = true)
+    private val validateCredentialsUseCase = ValidateCredentialsUseCaseImpl()
     private lateinit var viewModel: LoginViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = LoginViewModel(fakeNetwork)
+        val loginUseCase = LoginUseCaseImpl(
+            networkManager = fakeNetwork,
+            validateCredentialsUseCase = validateCredentialsUseCase,
+            ioDispatcher = testDispatcher
+        )
+        val observeNetworkUseCase = ObserveNetworkStatusUseCaseImpl(fakeNetwork)
+
+        viewModel = LoginViewModel(
+            loginUseCase = loginUseCase,
+            validateCredentialsUseCase = validateCredentialsUseCase,
+            observeNetworkStatusUseCase = observeNetworkUseCase,
+            dispatcher = testDispatcher
+        )
     }
 
     @After
@@ -45,6 +61,8 @@ class LoginViewModelTest {
         assertFalse(viewModel.uiState.value.canSubmit)
 
         viewModel.login()
+        advanceUntilIdle()
+
         assertTrue(viewModel.uiState.value.errorMessage?.contains("Internet connection required") == true)
         assertFalse(viewModel.uiState.value.isSuccess)
     }
@@ -54,6 +72,7 @@ class LoginViewModelTest {
         viewModel.onEmailChanged("")
         viewModel.onPasswordChanged("")
         viewModel.login()
+        advanceUntilIdle()
 
         assertEquals("Email cannot be empty", viewModel.uiState.value.emailError)
         assertEquals("Password cannot be empty", viewModel.uiState.value.passwordError)
@@ -65,6 +84,7 @@ class LoginViewModelTest {
         viewModel.onEmailChanged("invalid-email")
         viewModel.onPasswordChanged("password123")
         viewModel.login()
+        advanceUntilIdle()
 
         assertNotNull(viewModel.uiState.value.emailError)
         assertFalse(viewModel.uiState.value.isSuccess)
@@ -75,6 +95,7 @@ class LoginViewModelTest {
         viewModel.onEmailChanged("student@university.edu")
         viewModel.onPasswordChanged("123")
         viewModel.login()
+        advanceUntilIdle()
 
         assertEquals("Password must be at least 6 characters", viewModel.uiState.value.passwordError)
         assertFalse(viewModel.uiState.value.isSuccess)
@@ -143,15 +164,14 @@ class LoginViewModelTest {
         assertFalse(viewModel.uiState.value.canSubmit)
 
         viewModel.onEmailChanged("user@example.com")
-        assertFalse(viewModel.uiState.value.canSubmit) // password still empty
+        assertFalse(viewModel.uiState.value.canSubmit)
 
-        viewModel.onPasswordChanged("123") // too short
+        viewModel.onPasswordChanged("123")
         assertFalse(viewModel.uiState.value.canSubmit)
 
         viewModel.onPasswordChanged("password123")
         assertTrue(viewModel.uiState.value.canSubmit)
 
-        // If user breaks email, canSubmit turns false
         viewModel.onEmailChanged("invalid")
         assertFalse(viewModel.uiState.value.canSubmit)
     }

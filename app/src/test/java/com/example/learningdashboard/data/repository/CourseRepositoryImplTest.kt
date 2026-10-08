@@ -7,7 +7,7 @@ import com.example.learningdashboard.data.local.entity.LessonEntity
 import com.example.learningdashboard.data.remote.CourseApi
 import com.example.learningdashboard.data.remote.model.CourseDto
 import com.example.learningdashboard.data.remote.model.LessonDto
-import com.example.learningdashboard.data.util.NetworkManager
+import com.example.learningdashboard.domain.error.AppError
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -47,9 +47,8 @@ class CourseRepositoryImplTest {
             override suspend fun getCourses(): List<CourseDto> = emptyList()
             override suspend fun getLessons(courseId: Long): List<LessonDto> = emptyList()
         }
-        val fakeNetwork = FakeTestNetworkManager(online = true)
 
-        val repository = CourseRepositoryImpl(fakeCourseDao, fakeLessonDao, fakeApi, fakeNetwork)
+        val repository = CourseRepositoryImpl(fakeCourseDao, fakeLessonDao, fakeApi)
 
         // 2 of 4 lessons completed = 50% progress
         val initialCourses = repository.observeCourses().first()
@@ -67,55 +66,51 @@ class CourseRepositoryImplTest {
     }
 
     @Test
-    fun refreshCourses_whenDatabaseHasData_doesNotCallApi() = runTest {
-        val courseFlow = MutableStateFlow(
-            listOf(
-                CourseEntity(1L, "Python", "Prog", 101L, "John", 20)
-            )
-        )
-        val lessonFlow = MutableStateFlow<List<LessonEntity>>(emptyList())
-        val fakeCourseDao = createFakeCourseDao(courseFlow)
-        val fakeLessonDao = createFakeLessonDao(lessonFlow)
-
-        var apiCalled = false
-        val fakeApi = object : CourseApi {
-            override suspend fun getCourses(): List<CourseDto> {
-                apiCalled = true
-                return emptyList()
-            }
-            override suspend fun getLessons(courseId: Long): List<LessonDto> = emptyList()
-        }
-        val fakeNetwork = FakeTestNetworkManager(online = true)
-
-        val repository = CourseRepositoryImpl(fakeCourseDao, fakeLessonDao, fakeApi, fakeNetwork)
-        repository.refreshCourses(forceRefresh = false)
-
-        // DB had data, so API should not be called
-        assertTrue(!apiCalled)
-    }
-
-    @Test
-    fun refreshCourses_whenDatabaseEmptyAndOffline_doesNotCallApi() = runTest {
+    fun fetchAndStoreCourses_storesInLocalDatabase() = runTest {
         val courseFlow = MutableStateFlow<List<CourseEntity>>(emptyList())
         val lessonFlow = MutableStateFlow<List<LessonEntity>>(emptyList())
         val fakeCourseDao = createFakeCourseDao(courseFlow)
         val fakeLessonDao = createFakeLessonDao(lessonFlow)
 
-        var apiCalled = false
+        val fakeApi = object : CourseApi {
+            override suspend fun getCourses(): List<CourseDto> = listOf(
+                CourseDto(1L, "Python", "Prog", 101L, "John Smith", 20)
+            )
+            override suspend fun getLessons(courseId: Long): List<LessonDto> = listOf(
+                LessonDto(101L, 1L, "Intro", false)
+            )
+        }
+
+        val repository = CourseRepositoryImpl(fakeCourseDao, fakeLessonDao, fakeApi)
+        repository.fetchAndStoreCourses()
+
+        assertEquals(1, fakeCourseDao.getCourseCount())
+        assertEquals(1, fakeLessonDao.getLessonCount())
+    }
+
+    @Test
+    fun fetchAndStoreCourses_propagatesNetworkErrors() = runTest {
+        val courseFlow = MutableStateFlow<List<CourseEntity>>(emptyList())
+        val lessonFlow = MutableStateFlow<List<LessonEntity>>(emptyList())
+        val fakeCourseDao = createFakeCourseDao(courseFlow)
+        val fakeLessonDao = createFakeLessonDao(lessonFlow)
+
         val fakeApi = object : CourseApi {
             override suspend fun getCourses(): List<CourseDto> {
-                apiCalled = true
-                return emptyList()
+                throw AppError.NetworkError.ServerUnavailable()
             }
             override suspend fun getLessons(courseId: Long): List<LessonDto> = emptyList()
         }
-        val fakeNetwork = FakeTestNetworkManager(online = false) // Device is OFFLINE
 
-        val repository = CourseRepositoryImpl(fakeCourseDao, fakeLessonDao, fakeApi, fakeNetwork)
-        repository.refreshCourses(forceRefresh = false)
+        val repository = CourseRepositoryImpl(fakeCourseDao, fakeLessonDao, fakeApi)
 
-        // Offline and DB empty: API should NOT be called
-        assertTrue(!apiCalled)
+        var thrown = false
+        try {
+            repository.fetchAndStoreCourses()
+        } catch (e: AppError.NetworkError.ServerUnavailable) {
+            thrown = true
+        }
+        assertTrue(thrown)
     }
 
     @Test
@@ -132,9 +127,8 @@ class CourseRepositoryImplTest {
             override suspend fun getCourses(): List<CourseDto> = emptyList()
             override suspend fun getLessons(courseId: Long): List<LessonDto> = emptyList()
         }
-        val fakeNetwork = FakeTestNetworkManager(online = true)
 
-        val repository = CourseRepositoryImpl(fakeCourseDao, fakeLessonDao, fakeApi, fakeNetwork)
+        val repository = CourseRepositoryImpl(fakeCourseDao, fakeLessonDao, fakeApi)
         repository.clearAllData()
 
         assertEquals(0, fakeCourseDao.getCourseCount())
@@ -165,10 +159,5 @@ class CourseRepositoryImplTest {
         override suspend fun insertLessonsIfNotExists(lessons: List<LessonEntity>) { lessonFlow.value = lessons }
         override suspend fun getLessonCount(): Int = lessonFlow.value.size
         override suspend fun deleteAllLessons() { lessonFlow.value = emptyList() }
-    }
-
-    private class FakeTestNetworkManager(private val online: Boolean) : NetworkManager {
-        override val isOnline: Flow<Boolean> = MutableStateFlow(online)
-        override fun isCurrentlyOnline(): Boolean = online
     }
 }

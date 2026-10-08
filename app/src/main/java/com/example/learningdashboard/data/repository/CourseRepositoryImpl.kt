@@ -3,7 +3,7 @@ package com.example.learningdashboard.data.repository
 import com.example.learningdashboard.data.local.dao.CourseDao
 import com.example.learningdashboard.data.local.dao.LessonDao
 import com.example.learningdashboard.data.remote.CourseApi
-import com.example.learningdashboard.data.util.NetworkManager
+import com.example.learningdashboard.domain.error.AppError
 import com.example.learningdashboard.domain.model.Course
 import com.example.learningdashboard.domain.model.Lesson
 import com.example.learningdashboard.domain.repository.CourseRepository
@@ -11,13 +11,11 @@ import com.example.learningdashboard.domain.util.ProgressCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import java.io.IOException
 
 class CourseRepositoryImpl(
     private val courseDao: CourseDao,
     private val lessonDao: LessonDao,
-    private val courseApi: CourseApi,
-    private val networkManager: NetworkManager
+    private val courseApi: CourseApi
 ) : CourseRepository {
 
     override fun observeCourses(): Flow<List<Course>> {
@@ -63,67 +61,83 @@ class CourseRepositoryImpl(
         }
     }
 
-    override suspend fun refreshCourses(forceRefresh: Boolean) {
-        val cachedCount = courseDao.getCourseCount()
+    override suspend fun getCourseCount(): Int {
+        return try {
+            courseDao.getCourseCount()
+        } catch (e: Exception) {
+            throw AppError.DataError.DatabaseError("Failed to query course count", e)
+        }
+    }
 
-        // DB-First Strategy: If courses already exist locally and forceRefresh is false, return immediately
-        if (cachedCount > 0 && !forceRefresh) {
-            return
+    override suspend fun getLessonCount(courseId: Long): Int {
+        return try {
+            lessonDao.getLessonsForCourse(courseId).size
+        } catch (e: Exception) {
+            throw AppError.DataError.DatabaseError("Failed to query lesson count for course $courseId", e)
+        }
+    }
+
+    override suspend fun fetchAndStoreCourses() {
+        val remoteCourses = try {
+            courseApi.getCourses()
+        } catch (e: AppError.NetworkError) {
+            throw e
+        } catch (e: Exception) {
+            throw AppError.NetworkError.Unknown("Failed to fetch courses from network", e)
         }
 
-        // Check network availability before initiating remote API call
-        if (!networkManager.isCurrentlyOnline()) {
-            if (cachedCount == 0) {
-                // When offline and DB has no data, do not attempt to fetch from API
-                return
-            } else {
-                throw IOException("No internet connection available to refresh courses.")
-            }
+        try {
+            courseDao.insertCourses(remoteCourses.map { it.toEntity() })
+        } catch (e: Exception) {
+            throw AppError.DataError.DatabaseError("Failed to store courses in database", e)
         }
 
-        // Fetch latest courses from remote API
-        val remoteCourses = courseApi.getCourses()
-        courseDao.insertCourses(remoteCourses.map { it.toEntity() })
-
-        // Pre-cache lessons for each course if not already stored, preserving existing user progress
         remoteCourses.forEach { course ->
             try {
                 val remoteLessons = courseApi.getLessons(course.id)
                 lessonDao.insertLessonsIfNotExists(remoteLessons.map { it.toEntity() })
-            } catch (_: Exception) {
+            } catch (e: AppError.NetworkError) {
+                // Secondary non-fatal remote lesson prefetch error; continue with other courses
+            } catch (e: Exception) {
+                throw AppError.DataError.DatabaseError("Failed to persist lessons for course ${course.id}", e)
             }
         }
     }
 
-    override suspend fun refreshLessons(courseId: Long, forceRefresh: Boolean) {
-        val cachedLessons = lessonDao.getLessonsForCourse(courseId)
-
-        // DB-First Strategy for lessons
-        if (cachedLessons.isNotEmpty() && !forceRefresh) {
-            return
+    override suspend fun fetchAndStoreLessons(courseId: Long) {
+        val remoteLessons = try {
+            courseApi.getLessons(courseId)
+        } catch (e: AppError.NetworkError) {
+            throw e
+        } catch (e: Exception) {
+            throw AppError.NetworkError.Unknown("Failed to fetch lessons for course $courseId", e)
         }
 
-        if (!networkManager.isCurrentlyOnline()) {
-            if (cachedLessons.isEmpty()) {
-                return
-            } else {
-                throw IOException("No internet connection available to refresh lessons.")
-            }
+        try {
+            lessonDao.insertLessonsIfNotExists(remoteLessons.map { it.toEntity() })
+        } catch (e: Exception) {
+            throw AppError.DataError.DatabaseError("Failed to store lessons for course $courseId", e)
         }
-
-        val remoteLessons = courseApi.getLessons(courseId)
-        lessonDao.insertLessonsIfNotExists(remoteLessons.map { it.toEntity() })
     }
+
     override suspend fun markLessonCompleted(
         courseId: Long,
         lessonId: Long,
         completed: Boolean
     ) {
-        lessonDao.updateLessonCompletion(lessonId, completed)
+        try {
+            lessonDao.updateLessonCompletion(lessonId, completed)
+        } catch (e: Exception) {
+            throw AppError.DataError.DatabaseError("Failed to update lesson $lessonId completion status", e)
+        }
     }
 
     override suspend fun clearAllData() {
-        lessonDao.deleteAllLessons()
-        courseDao.deleteAllCourses()
+        try {
+            lessonDao.deleteAllLessons()
+            courseDao.deleteAllCourses()
+        } catch (e: Exception) {
+            throw AppError.DataError.DatabaseError("Failed to clear local database", e)
+        }
     }
 }

@@ -6,39 +6,43 @@ A robust, modern Android application built using Kotlin, Jetpack Compose, MVVM +
 
 ## 1. Architecture & Why It Was Chosen
 
-The application strictly implements **Unidirectional Data Flow (UDF)** adhering to Google's official Android Architecture Guide:
+The application strictly implements **Clean Architecture** and **Unidirectional Data Flow (UDF)**:
 
 ```
-Compose Screen (Presentation)
-     ↓ (events / callbacks)
-ViewModel
-     ↓ (triggers / observes)
-Repository Interface (Domain)
+Compose Screen (Presentation UI)
+     ↓ (user actions / callbacks)
+ViewModel (presentation.viewmodel - Scoped with CoroutineDispatchers)
+     ↓ (triggers domain operations / receives UiError)
+Domain UseCases (domain.usecase - Business rules, simulated delays & validation)
+     ├── LoginUseCase / ValidateCredentialsUseCase
+     ├── GetCoursesUseCase / RefreshCoursesUseCase (DB-first orchestration)
+     ├── GetCourseDetailsUseCase / RefreshCourseDetailsUseCase
+     ├── ToggleLessonCompletionUseCase / LogoutUseCase
+     └── ObserveNetworkStatusUseCase
      ↓
-Repository Implementation (Data)
-     ├── DB-First: Checks Room Database
-     │      └── If data exists: Uses cached data immediately
-     │      └── If empty: Checks NetworkManager before API call
-     ├── NetworkManager ──> Verifies Internet availability
-     ├── Remote API (DTOs) ──> Persists fresh records to Room
-     └── Room Database (Entities) ──> Emits via reactive Flow
-              ↓
-           Domain Models (Course, Lesson)
-              ↓
-           ViewModel StateFlow (UI State)
-              ↓
-           Compose UI (Renders State)
+Repository Interface (domain.repository - Pure Data Access)
+     ↓
+Repository Implementation (data.repository - Room DB & Remote API sync)
+     ├── Room Database (Local Source of Truth)
+     └── Remote API (FakeCourseApi)
+     ↓
+Domain Models (Course, Lesson) & Typed Error Hierarchy (AppError)
+     ├── NetworkError (API layer)
+     ├── DataError (Repository layer)
+     └── BusinessError (UseCase layer)
 ```
 
 ### Why this architecture was chosen:
 1. **Single Source of Truth**: Room is the sole source of truth for all course and lesson data displayed by the UI. The UI never observes API responses directly; the API updates Room, and Room emits updates via reactive `Flow`.
-2. **DB-First Architecture**: When entering the course dashboard or details screens, data is always read from the local Room database first. Only if the local database is empty will the repository attempt to fetch from the remote API, and only when `NetworkManager` confirms active internet connectivity.
-3. **Separation of Concerns**: 
-   - **Domain Layer**: Contains pure business models (`Course`, `Lesson`) and logic (`ProgressCalculator`) completely decoupled from Android framework dependencies or database schemas.
-   - **Data Layer**: Coordinates network connectivity (`NetworkManager`), remote API mock, and database operations behind a clean `CourseRepository` interface.
-   - **Presentation Layer**: Thin, stateless Composables driven by immutable `UiState` exposed through `StateFlow` from ViewModels.
-4. **Single Activity Design**: A single `MainActivity` hosts the `AppNavHost` and manages edge-to-edge system insets. This avoids heavy multi-activity lifecycle overhead and prevents window state loss during transitions.
-5. **Maintainability & Simplicity**: Uses a centralized `AppContainer` for dependency injection rather than heavy DI framework boilerplate, keeping setup transparent and lightweight.
+2. **Dedicated UseCases for Business Logic**: ViewModels do not communicate directly with repositories. All business rules (DB-first orchestration, mock loading delays, credential verification, and completion toggles) reside strictly within dedicated UseCases, keeping ViewModels thin and focused solely on UI state.
+3. **Repository Isolated for Data Only**: Repositories are strictly responsible for data querying, persistence, and network mapping, without UI or presentation state logic.
+4. **Dispatcher-Scoped Coroutines & Zero Delays in ViewModels**: ViewModels launch all coroutines with explicitly injected `CoroutineDispatcher` instances (`Dispatchers.Main` by default). Artificial latency and heavy tasks are executed on `Dispatchers.IO` inside UseCases.
+5. **Layered Error Handling with Typed Sealed Classes**:
+   - **`AppError.NetworkError`**: Isolated to the API layer (e.g. server outage, parse errors).
+   - **`AppError.DataError`**: Isolated to the Repository layer (e.g. database errors).
+   - **`AppError.BusinessError`**: Handled and thrown in the UseCase layer (e.g. validation, offline action restriction, invalid credentials).
+   - **`UiError`**: ViewModels transform domain errors into user-friendly UI presentation states cleanly.
+6. **Separated ViewModel Architecture**: All ViewModels reside in a dedicated package `com.example.learningdashboard.presentation.viewmodel`, completely decoupled from Compose screen implementations.
 
 ---
 

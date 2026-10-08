@@ -33,6 +33,7 @@ import com.example.learningdashboard.presentation.components.AppProgressBar
 import com.example.learningdashboard.presentation.components.ErrorState
 import com.example.learningdashboard.presentation.components.LessonItem
 import com.example.learningdashboard.presentation.components.LoadingState
+import com.example.learningdashboard.presentation.viewmodel.CourseDetailsViewModel
 
 @Composable
 fun CourseDetailsRoute(
