@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import com.example.learningdashboard.di.AppContainer
+import com.example.learningdashboard.di.LocalAppContainer
 import com.example.learningdashboard.navigation.AppNavHost
 import com.example.learningdashboard.ui.theme.LearningDashboardTheme
 
@@ -33,12 +35,14 @@ fun LearningDashboardApp(
     appContainer: AppContainer,
     modifier: Modifier = Modifier
 ) {
-    LearningDashboardTheme {
-        Surface(
-            modifier = modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            AppNavHost(appContainer = appContainer)
+    CompositionLocalProvider(LocalAppContainer provides appContainer) {
+        LearningDashboardTheme {
+            Surface(
+                modifier = modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                AppNavHost(appContainer = appContainer)
+            }
         }
     }
 }

@@ -23,8 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -33,34 +31,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.learningdashboard.presentation.viewmodel.LoginViewModel
 import com.example.learningdashboard.util.Constants
-
-@Composable
-fun LoginRoute(
-    viewModel: LoginViewModel,
-    onNavigateToDashboard: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(state.isSuccess) {
-        if (state.isSuccess) {
-            onNavigateToDashboard()
-        }
-    }
-
-    LoginScreen(
-        state = state,
-        onEmailChange = viewModel::onEmailChanged,
-        onPasswordChange = viewModel::onPasswordChanged,
-        onEmailFocusChange = viewModel::onEmailFocusChanged,
-        onPasswordFocusChange = viewModel::onPasswordFocusChanged,
-        onLoginClick = viewModel::login,
-        modifier = modifier
-    )
-}
 
 @Composable
 fun LoginScreen(

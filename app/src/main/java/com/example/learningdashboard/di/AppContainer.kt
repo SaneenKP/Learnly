@@ -36,8 +36,13 @@ import com.example.learningdashboard.domain.usecase.SetAllLessonsCompletionUseCa
 import com.example.learningdashboard.domain.usecase.SetAllLessonsCompletionUseCaseImpl
 import com.example.learningdashboard.domain.usecase.ToggleLessonCompletionUseCase
 import com.example.learningdashboard.domain.usecase.ToggleLessonCompletionUseCaseImpl
+import androidx.compose.runtime.staticCompositionLocalOf
 import com.example.learningdashboard.domain.usecase.ValidateCredentialsUseCase
 import com.example.learningdashboard.domain.usecase.ValidateCredentialsUseCaseImpl
+
+val LocalAppContainer = staticCompositionLocalOf<AppContainer> {
+    error("No AppContainer provided in LocalAppContainer")
+}
 
 interface AppContainer {
     val database: AppDatabase

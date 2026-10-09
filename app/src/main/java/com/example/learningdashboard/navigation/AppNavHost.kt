@@ -8,7 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -16,12 +15,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.learningdashboard.di.AppContainer
+import com.example.learningdashboard.di.LocalAppContainer
 import com.example.learningdashboard.presentation.courses.CourseListRoute
 import com.example.learningdashboard.presentation.details.CourseDetailsRoute
 import com.example.learningdashboard.presentation.login.LoginRoute
-import com.example.learningdashboard.presentation.viewmodel.CourseDetailsViewModel
-import com.example.learningdashboard.presentation.viewmodel.CourseListViewModel
-import com.example.learningdashboard.presentation.viewmodel.LoginViewModel
 import com.example.learningdashboard.util.Constants
 
 object AppRoutes {
@@ -34,7 +31,7 @@ object AppRoutes {
 
 @Composable
 fun AppNavHost(
-    appContainer: AppContainer,
+    appContainer: AppContainer = LocalAppContainer.current,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController()
 ) {
@@ -60,15 +57,7 @@ fun AppNavHost(
         modifier = modifier
     ) {
         composable(AppRoutes.LOGIN) {
-            val loginViewModel: LoginViewModel = viewModel(
-                factory = LoginViewModel.provideFactory(
-                    loginUseCase = appContainer.loginUseCase,
-                    validateCredentialsUseCase = appContainer.validateCredentialsUseCase,
-                    observeNetworkStatusUseCase = appContainer.observeNetworkStatusUseCase
-                )
-            )
             LoginRoute(
-                viewModel = loginViewModel,
                 onNavigateToDashboard = {
                     navController.navigate(AppRoutes.COURSES) {
                         popUpTo(AppRoutes.LOGIN) {
@@ -80,16 +69,7 @@ fun AppNavHost(
         }
 
         composable(AppRoutes.COURSES) {
-            val courseListViewModel: CourseListViewModel = viewModel(
-                factory = CourseListViewModel.provideFactory(
-                    getCoursesUseCase = appContainer.getCoursesUseCase,
-                    refreshCoursesUseCase = appContainer.refreshCoursesUseCase,
-                    logoutUseCase = appContainer.logoutUseCase,
-                    observeNetworkStatusUseCase = appContainer.observeNetworkStatusUseCase
-                )
-            )
             CourseListRoute(
-                viewModel = courseListViewModel,
                 onCourseClick = { courseId ->
                     navController.navigate(AppRoutes.courseDetails(courseId))
                 },
@@ -110,18 +90,8 @@ fun AppNavHost(
             )
         ) { backStackEntry ->
             val courseId = backStackEntry.arguments?.getLong(Constants.Navigation.ARG_COURSE_ID) ?: return@composable
-            val courseDetailsViewModel: CourseDetailsViewModel = viewModel(
-                factory = CourseDetailsViewModel.provideFactory(
-                    courseId = courseId,
-                    getCourseDetailsUseCase = appContainer.getCourseDetailsUseCase,
-                    refreshCourseDetailsUseCase = appContainer.refreshCourseDetailsUseCase,
-                    toggleLessonCompletionUseCase = appContainer.toggleLessonCompletionUseCase,
-                    setAllLessonsCompletionUseCase = appContainer.setAllLessonsCompletionUseCase,
-                    observeNetworkStatusUseCase = appContainer.observeNetworkStatusUseCase
-                )
-            )
             CourseDetailsRoute(
-                viewModel = courseDetailsViewModel,
+                courseId = courseId,
                 onBackClick = {
                     navController.popBackStack()
                 }

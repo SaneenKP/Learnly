@@ -32,39 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.learningdashboard.presentation.components.CourseCard
 import com.example.learningdashboard.presentation.components.EmptyState
 import com.example.learningdashboard.presentation.components.ErrorState
 import com.example.learningdashboard.presentation.components.LoadingState
 import com.example.learningdashboard.presentation.components.NetworkUnavailableDialog
-import com.example.learningdashboard.presentation.viewmodel.CourseListViewModel
-
-@Composable
-fun CourseListRoute(
-    viewModel: CourseListViewModel,
-    onCourseClick: (Long) -> Unit,
-    onLogout: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val showNetworkDialog by viewModel.showNetworkDialog.collectAsStateWithLifecycle()
-    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
-
-    CourseListScreen(
-        state = state,
-        showNetworkDialog = showNetworkDialog,
-        isOnline = isOnline,
-        onCourseClick = onCourseClick,
-        onRetry = viewModel::refresh,
-        onOfflineLogoutAttempt = viewModel::showNetworkUnavailableDialog,
-        onDismissNetworkDialog = viewModel::dismissNetworkDialog,
-        onLogoutClick = {
-            viewModel.logout(onLoggedOut = onLogout)
-        },
-        modifier = modifier
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

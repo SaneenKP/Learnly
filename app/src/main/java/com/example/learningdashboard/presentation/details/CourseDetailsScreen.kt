@@ -27,43 +27,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.learningdashboard.presentation.components.AppProgressBar
 import com.example.learningdashboard.presentation.components.ErrorState
 import com.example.learningdashboard.presentation.components.LessonItem
 import com.example.learningdashboard.presentation.components.LoadingState
 import com.example.learningdashboard.presentation.components.NetworkUnavailableDialog
-import com.example.learningdashboard.presentation.viewmodel.CourseDetailsViewModel
-
-@Composable
-fun CourseDetailsRoute(
-    viewModel: CourseDetailsViewModel,
-    onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val showNetworkDialog by viewModel.showNetworkDialog.collectAsStateWithLifecycle()
-
-    CourseDetailsScreen(
-        state = state,
-        showNetworkDialog = showNetworkDialog,
-        onDismissNetworkDialog = viewModel::dismissNetworkDialog,
-        onToggleLesson = viewModel::toggleLessonCompletion,
-        onSelectAll = viewModel::selectAllLessons,
-        onClearAll = viewModel::clearAllLessons,
-        onBackClick = onBackClick,
-        onRetry = viewModel::refresh,
-        modifier = modifier
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseDetailsScreen(
+    modifier: Modifier = Modifier,
     state: CourseDetailsUiState,
     showNetworkDialog: Boolean = false,
     onDismissNetworkDialog: () -> Unit = {},
@@ -72,7 +48,6 @@ fun CourseDetailsScreen(
     onClearAll: () -> Unit,
     onBackClick: () -> Unit,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
 ) {
     if (showNetworkDialog) {
         NetworkUnavailableDialog(onDismiss = onDismissNetworkDialog)
