@@ -15,7 +15,7 @@ class ValidateCredentialsUseCaseImpl : ValidateCredentialsUseCase {
         val trimmed = email.trim()
         return when {
             trimmed.isBlank() -> "Email cannot be empty"
-            !emailRegex.matches(trimmed) -> "Please enter a valid email address (e.g. user@domain.com)"
+            !emailRegex.matches(trimmed) -> "Invalid email address"
             else -> null
         }
     }

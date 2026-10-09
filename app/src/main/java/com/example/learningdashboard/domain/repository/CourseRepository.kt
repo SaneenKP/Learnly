@@ -55,6 +55,11 @@ interface CourseRepository {
     )
 
     /**
+     * Batch updates completion status for all lessons belonging to a specific course.
+     */
+    suspend fun setAllLessonsCompletion(courseId: Long, completed: Boolean)
+
+    /**
      * Erases all cached course and lesson data from local storage.
      */
     suspend fun clearAllData()

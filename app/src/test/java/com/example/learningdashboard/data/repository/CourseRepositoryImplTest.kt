@@ -11,6 +11,7 @@ import com.example.learningdashboard.domain.error.AppError
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -135,6 +136,35 @@ class CourseRepositoryImplTest {
         assertEquals(0, fakeLessonDao.getLessonCount())
     }
 
+    @Test
+    fun setAllLessonsCompletion_updatesAllLessonsForCourse() = runTest {
+        val courseFlow = MutableStateFlow(
+            listOf(CourseEntity(1L, "Python", "Dev", 1L, "John", 2))
+        )
+        val lessonFlow = MutableStateFlow(
+            listOf(
+                LessonEntity(101L, 1L, "Lesson 1", false),
+                LessonEntity(102L, 1L, "Lesson 2", false),
+                LessonEntity(201L, 2L, "Other Course Lesson", false)
+            )
+        )
+        val fakeCourseDao = createFakeCourseDao(courseFlow)
+        val fakeLessonDao = createFakeLessonDao(lessonFlow)
+        val fakeApi = object : CourseApi {
+            override suspend fun getCourses(): List<CourseDto> = emptyList()
+            override suspend fun getLessons(courseId: Long): List<LessonDto> = emptyList()
+        }
+
+        val repository = CourseRepositoryImpl(fakeCourseDao, fakeLessonDao, fakeApi)
+        repository.setAllLessonsCompletion(courseId = 1L, completed = true)
+
+        val lessons = repository.observeLessons(1L).first()
+        assertTrue(lessons.all { it.completed })
+        // Verify other course was not affected
+        val otherCourseLessons = repository.observeLessons(2L).first()
+        assertTrue(otherCourseLessons.none { it.completed })
+    }
+
     private fun createFakeCourseDao(courseFlow: MutableStateFlow<List<CourseEntity>>) = object : CourseDao {
         override fun observeCourses(): Flow<List<CourseEntity>> = courseFlow
         override fun observeCourse(courseId: Long): Flow<CourseEntity?> = MutableStateFlow(courseFlow.value.firstOrNull())
@@ -146,13 +176,20 @@ class CourseRepositoryImplTest {
     }
 
     private fun createFakeLessonDao(lessonFlow: MutableStateFlow<List<LessonEntity>>) = object : LessonDao {
-        override fun observeLessons(courseId: Long): Flow<List<LessonEntity>> = lessonFlow
+        override fun observeLessons(courseId: Long): Flow<List<LessonEntity>> = lessonFlow.map { list ->
+            list.filter { it.courseId == courseId }
+        }
         override fun observeAllLessons(): Flow<List<LessonEntity>> = lessonFlow
-        override suspend fun getLessonsForCourse(courseId: Long): List<LessonEntity> = lessonFlow.value
+        override suspend fun getLessonsForCourse(courseId: Long): List<LessonEntity> = lessonFlow.value.filter { it.courseId == courseId }
         override suspend fun getLessonById(lessonId: Long): LessonEntity? = lessonFlow.value.firstOrNull { it.id == lessonId }
         override suspend fun updateLessonCompletion(lessonId: Long, completed: Boolean) {
             lessonFlow.value = lessonFlow.value.map {
                 if (it.id == lessonId) it.copy(completed = completed) else it
+            }
+        }
+        override suspend fun updateAllLessonsCompletionForCourse(courseId: Long, completed: Boolean) {
+            lessonFlow.value = lessonFlow.value.map {
+                if (it.courseId == courseId) it.copy(completed = completed) else it
             }
         }
         override suspend fun insertLessons(lessons: List<LessonEntity>) { lessonFlow.value = lessons }

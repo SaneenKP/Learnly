@@ -135,6 +135,17 @@ class CourseRepositoryImpl(
         }
     }
 
+    override suspend fun setAllLessonsCompletion(
+        courseId: Long,
+        completed: Boolean
+    ) = withContext(Dispatchers.IO) {
+        try {
+            lessonDao.updateAllLessonsCompletionForCourse(courseId, completed)
+        } catch (e: Exception) {
+            throw AppError.DataError.DatabaseError("Failed to batch update lessons completion for course $courseId", e)
+        }
+    }
+
     override suspend fun clearAllData() = withContext(Dispatchers.IO) {
         try {
             lessonDao.deleteAllLessons()

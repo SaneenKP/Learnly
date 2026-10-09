@@ -7,7 +7,9 @@ import com.example.learningdashboard.data.remote.model.LoginRequestDto
 import com.example.learningdashboard.data.remote.model.LoginResponseDto
 import com.example.learningdashboard.domain.error.AppError
 import com.example.learningdashboard.util.Constants
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 // ============================================================================
@@ -32,7 +34,7 @@ interface CourseApi {
 /**
  * Unified application API contract combining all feature endpoints.
  */
-interface AppLoginViewApi : AuthApi, CourseApi
+interface AppApi : AuthApi, CourseApi
 
 // ============================================================================
 // FAKE / MOCK API IMPLEMENTATIONS
@@ -40,7 +42,7 @@ interface AppLoginViewApi : AuthApi, CourseApi
 
 /**
  * Fake implementation of [AuthApi] simulating remote authentication with network delay
- * and credential validation against default credentials.
+ * and credential validation against default credentials under Dispatchers.IO.
  */
 class FakeAuthApi(
     private val simulatedDelayMs: Long = Constants.Auth.LOGIN_DELAY_MS
@@ -51,7 +53,7 @@ class FakeAuthApi(
      */
     var shouldSimulateError: Boolean = false
 
-    override suspend fun login(request: LoginRequestDto): LoginResponseDto {
+    override suspend fun login(request: LoginRequestDto): LoginResponseDto = withContext(Dispatchers.IO) {
         if (shouldSimulateError) {
             throw AppError.NetworkError.ServerUnavailable("Authentication server is temporarily unreachable.")
         }
@@ -63,7 +65,7 @@ class FakeAuthApi(
         val trimmedEmail = request.email.trim()
         val password = request.password
 
-        return if (trimmedEmail == Constants.Auth.DEFAULT_EMAIL && password == Constants.Auth.DEFAULT_PASSWORD) {
+        if (trimmedEmail == Constants.Auth.DEFAULT_EMAIL && password == Constants.Auth.DEFAULT_PASSWORD) {
             LoginResponseDto(
                 token = Constants.Auth.MOCK_AUTH_TOKEN,
                 email = trimmedEmail,
@@ -77,7 +79,7 @@ class FakeAuthApi(
 
 /**
  * Fake implementation of [CourseApi] simulating remote courses and lessons
- * by loading data from local JSON assets.
+ * by loading data from local JSON assets under Dispatchers.IO.
  */
 class FakeCourseApi(
     private val context: Context
@@ -93,12 +95,12 @@ class FakeCourseApi(
      */
     var shouldSimulateError: Boolean = false
 
-    override suspend fun getCourses(): List<CourseDto> {
+    override suspend fun getCourses(): List<CourseDto> = withContext(Dispatchers.IO) {
         if (shouldSimulateError) {
             throw AppError.NetworkError.ServerUnavailable()
         }
 
-        return try {
+        try {
             val jsonString = context.assets.open(Constants.Remote.ASSET_COURSES_JSON).bufferedReader().use { it.readText() }
             json.decodeFromString<List<CourseDto>>(jsonString)
         } catch (e: Exception) {
@@ -106,12 +108,12 @@ class FakeCourseApi(
         }
     }
 
-    override suspend fun getLessons(courseId: Long): List<LessonDto> {
+    override suspend fun getLessons(courseId: Long): List<LessonDto> = withContext(Dispatchers.IO) {
         if (shouldSimulateError) {
             throw AppError.NetworkError.ServerUnavailable("Server error: Unable to fetch lessons for course $courseId")
         }
 
-        return try {
+        try {
             val jsonString = context.assets.open(Constants.Remote.ASSET_LESSONS_JSON).bufferedReader().use { it.readText() }
             val allLessons = json.decodeFromString<List<LessonDto>>(jsonString)
             allLessons.filter { it.courseId == courseId }

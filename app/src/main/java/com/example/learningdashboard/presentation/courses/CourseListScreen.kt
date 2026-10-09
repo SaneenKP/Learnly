@@ -37,6 +37,7 @@ import com.example.learningdashboard.presentation.components.CourseCard
 import com.example.learningdashboard.presentation.components.EmptyState
 import com.example.learningdashboard.presentation.components.ErrorState
 import com.example.learningdashboard.presentation.components.LoadingState
+import com.example.learningdashboard.presentation.components.NetworkUnavailableDialog
 import com.example.learningdashboard.presentation.viewmodel.CourseListViewModel
 
 @Composable
@@ -47,11 +48,17 @@ fun CourseListRoute(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val showNetworkDialog by viewModel.showNetworkDialog.collectAsStateWithLifecycle()
+    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
 
     CourseListScreen(
         state = state,
+        showNetworkDialog = showNetworkDialog,
+        isOnline = isOnline,
         onCourseClick = onCourseClick,
         onRetry = viewModel::refresh,
+        onOfflineLogoutAttempt = viewModel::showNetworkUnavailableDialog,
+        onDismissNetworkDialog = viewModel::dismissNetworkDialog,
         onLogoutClick = {
             viewModel.logout(onLoggedOut = onLogout)
         },
@@ -63,12 +70,20 @@ fun CourseListRoute(
 @Composable
 fun CourseListScreen(
     state: CourseListUiState,
+    showNetworkDialog: Boolean = false,
+    isOnline: Boolean = true,
     onCourseClick: (Long) -> Unit,
     onRetry: () -> Unit,
+    onOfflineLogoutAttempt: () -> Unit = {},
+    onDismissNetworkDialog: () -> Unit = {},
     onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
+
+    if (showNetworkDialog) {
+        NetworkUnavailableDialog(onDismiss = onDismissNetworkDialog)
+    }
 
     if (showLogoutDialog) {
         AlertDialog(
@@ -104,7 +119,15 @@ fun CourseListScreen(
                             contentDescription = "Refresh"
                         )
                     }
-                    TextButton(onClick = { showLogoutDialog = true }) {
+                    TextButton(
+                        onClick = {
+                            if (!isOnline) {
+                                onOfflineLogoutAttempt()
+                            } else {
+                                showLogoutDialog = true
+                            }
+                        }
+                    ) {
                         Text(
                             text = "Logout",
                             color = MaterialTheme.colorScheme.onPrimaryContainer

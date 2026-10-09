@@ -6,8 +6,8 @@ package com.example.learningdashboard.util
 object Constants {
 
     object Auth {
-        const val DEFAULT_EMAIL = "student@university.edu"
-        const val DEFAULT_PASSWORD = "password123"
+        const val DEFAULT_EMAIL = "testing@gmail.com"
+        const val DEFAULT_PASSWORD = "testing123"
         const val LOGIN_DELAY_MS = 1200L
         const val MOCK_AUTH_TOKEN = "mock_jwt_token_learnly_dashboard"
     }
@@ -42,5 +42,11 @@ object Constants {
         const val ARG_COURSE_ID = "courseId"
 
         fun courseDetailsRoute(courseId: Long): String = "course/$courseId"
+    }
+
+    object Network {
+        const val DIALOG_AUTO_DISMISS_DELAY_MS = 3000L
+        const val NETWORK_UNAVAILABLE_TITLE = "No Internet Connection"
+        const val NETWORK_UNAVAILABLE_MESSAGE = "Network is not available. Please check your connection."
     }
 }

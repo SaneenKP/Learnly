@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -36,6 +35,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.learningdashboard.presentation.viewmodel.LoginViewModel
+import com.example.learningdashboard.util.Constants
 
 @Composable
 fun LoginRoute(
@@ -78,16 +78,17 @@ fun LoginScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            // Inset handling: accommodates system status/nav bars and soft keyboard edge-to-edge
+            // Inset handling: safeDrawingPadding handles status/nav bars, cutouts, and IME edge-to-edge
             .safeDrawingPadding()
-            .imePadding()
             .verticalScroll(scrollState)
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 24.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
+        Spacer(modifier = Modifier.height(32.dp))
+
         Text(
-            text = "Learning Dashboard",
+            text = "Learnly",
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.primary
         )
@@ -145,7 +146,7 @@ fun LoginScreen(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Email: student@university.edu\nPassword: password123",
+                    text = "Email: ${Constants.Auth.DEFAULT_EMAIL}\nPassword: ${Constants.Auth.DEFAULT_PASSWORD}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -223,7 +224,11 @@ fun LoginScreen(
             enabled = !state.isLoading
         )
 
-        if (state.errorMessage != null) {
+        val showGeneralError = state.errorMessage != null &&
+            state.errorMessage != state.displayPasswordError &&
+            state.errorMessage != state.displayEmailError
+
+        if (showGeneralError) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = state.errorMessage,

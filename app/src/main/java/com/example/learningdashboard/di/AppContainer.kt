@@ -32,6 +32,8 @@ import com.example.learningdashboard.domain.usecase.RefreshCourseDetailsUseCase
 import com.example.learningdashboard.domain.usecase.RefreshCourseDetailsUseCaseImpl
 import com.example.learningdashboard.domain.usecase.RefreshCoursesUseCase
 import com.example.learningdashboard.domain.usecase.RefreshCoursesUseCaseImpl
+import com.example.learningdashboard.domain.usecase.SetAllLessonsCompletionUseCase
+import com.example.learningdashboard.domain.usecase.SetAllLessonsCompletionUseCaseImpl
 import com.example.learningdashboard.domain.usecase.ToggleLessonCompletionUseCase
 import com.example.learningdashboard.domain.usecase.ToggleLessonCompletionUseCaseImpl
 import com.example.learningdashboard.domain.usecase.ValidateCredentialsUseCase
@@ -58,6 +60,7 @@ interface AppContainer {
     val getCourseDetailsUseCase: GetCourseDetailsUseCase
     val refreshCourseDetailsUseCase: RefreshCourseDetailsUseCase
     val toggleLessonCompletionUseCase: ToggleLessonCompletionUseCase
+    val setAllLessonsCompletionUseCase: SetAllLessonsCompletionUseCase
     val logoutUseCase: LogoutUseCase
 }
 
@@ -157,6 +160,12 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val toggleLessonCompletionUseCase: ToggleLessonCompletionUseCase by lazy {
         ToggleLessonCompletionUseCaseImpl(
+            repository = courseRepository
+        )
+    }
+
+    override val setAllLessonsCompletionUseCase: SetAllLessonsCompletionUseCase by lazy {
+        SetAllLessonsCompletionUseCaseImpl(
             repository = courseRepository
         )
     }

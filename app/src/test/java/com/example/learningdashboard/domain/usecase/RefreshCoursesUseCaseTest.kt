@@ -77,6 +77,7 @@ class RefreshCoursesUseCaseTest {
 
         override suspend fun fetchAndStoreLessons(courseId: Long) {}
         override suspend fun markLessonCompleted(courseId: Long, lessonId: Long, completed: Boolean) {}
+        override suspend fun setAllLessonsCompletion(courseId: Long, completed: Boolean) {}
         override suspend fun clearAllData() {}
     }
 

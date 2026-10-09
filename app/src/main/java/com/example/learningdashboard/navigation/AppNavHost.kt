@@ -84,7 +84,8 @@ fun AppNavHost(
                 factory = CourseListViewModel.provideFactory(
                     getCoursesUseCase = appContainer.getCoursesUseCase,
                     refreshCoursesUseCase = appContainer.refreshCoursesUseCase,
-                    logoutUseCase = appContainer.logoutUseCase
+                    logoutUseCase = appContainer.logoutUseCase,
+                    observeNetworkStatusUseCase = appContainer.observeNetworkStatusUseCase
                 )
             )
             CourseListRoute(
@@ -114,7 +115,9 @@ fun AppNavHost(
                     courseId = courseId,
                     getCourseDetailsUseCase = appContainer.getCourseDetailsUseCase,
                     refreshCourseDetailsUseCase = appContainer.refreshCourseDetailsUseCase,
-                    toggleLessonCompletionUseCase = appContainer.toggleLessonCompletionUseCase
+                    toggleLessonCompletionUseCase = appContainer.toggleLessonCompletionUseCase,
+                    setAllLessonsCompletionUseCase = appContainer.setAllLessonsCompletionUseCase,
+                    observeNetworkStatusUseCase = appContainer.observeNetworkStatusUseCase
                 )
             )
             CourseDetailsRoute(

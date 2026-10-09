@@ -64,11 +64,11 @@ sealed class AppError(
         cause: Throwable? = null
     ) : AppError(message, cause) {
         data class InvalidCredentials(
-            override val message: String = "Invalid credentials. Use student@university.edu / password123"
+            override val message: String = "Invalid credentials. Use testing@gmail.com / testing123"
         ) : BusinessError(message)
 
         data class InvalidEmail(
-            override val message: String = "Please enter a valid email address (e.g. user@domain.com)"
+            override val message: String = "Invalid email address"
         ) : BusinessError(message)
 
         data class EmptyEmail(

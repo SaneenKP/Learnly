@@ -25,6 +25,9 @@ interface LessonDao {
     @Query("UPDATE lessons SET completed = :completed WHERE id = :lessonId")
     suspend fun updateLessonCompletion(lessonId: Long, completed: Boolean)
 
+    @Query("UPDATE lessons SET completed = :completed WHERE courseId = :courseId")
+    suspend fun updateAllLessonsCompletionForCourse(courseId: Long, completed: Boolean)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLessons(lessons: List<LessonEntity>)
 

@@ -108,10 +108,15 @@ class LoginViewModel(
                 loginUseCase(email, password)
                 _uiState.update { it.copy(isLoading = false, isSuccess = true) }
             } catch (e: AppError) {
+                val isFieldError = e is AppError.BusinessError.ShortPassword ||
+                    e is AppError.BusinessError.EmptyPassword ||
+                    e is AppError.BusinessError.InvalidEmail ||
+                    e is AppError.BusinessError.EmptyEmail
+
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = e.toUiError().message
+                        errorMessage = if (isFieldError) null else e.toUiError().message
                     )
                 }
             } catch (e: Exception) {

@@ -104,13 +104,14 @@ class LoginViewModelTest {
 
     @Test
     fun login_shortPassword_showsValidationError() = runTest {
-        viewModel.onEmailChanged("student@university.edu")
+        viewModel.onEmailChanged(Constants.Auth.DEFAULT_EMAIL)
         viewModel.onPasswordChanged("123")
         viewModel.login()
         advanceUntilIdle()
 
         assertEquals("Password must be at least 6 characters", viewModel.uiState.value.passwordError)
         assertEquals("Password must be at least 6 characters", viewModel.uiState.value.displayPasswordError)
+        assertNull("Password validation error must not duplicate into errorMessage", viewModel.uiState.value.errorMessage)
         assertFalse(viewModel.uiState.value.isSuccess)
     }
 
@@ -128,8 +129,8 @@ class LoginViewModelTest {
 
     @Test
     fun login_validCredentials_setsSuccessTrue() = runTest {
-        viewModel.onEmailChanged("student@university.edu")
-        viewModel.onPasswordChanged("password123")
+        viewModel.onEmailChanged(Constants.Auth.DEFAULT_EMAIL)
+        viewModel.onPasswordChanged(Constants.Auth.DEFAULT_PASSWORD)
         viewModel.login()
 
         waitForLoginCompletion()
@@ -167,7 +168,7 @@ class LoginViewModelTest {
 
         // Error is now visible after field lost focus
         assertEquals(
-            "Please enter a valid email address (e.g. user@domain.com)",
+            "Invalid email address",
             viewModel.uiState.value.displayEmailError
         )
 
@@ -190,11 +191,11 @@ class LoginViewModelTest {
 
         // 5. User refocuses and types valid values
         viewModel.onEmailFocusChanged(isFocused = true)
-        viewModel.onEmailChanged("student@university.edu")
+        viewModel.onEmailChanged(Constants.Auth.DEFAULT_EMAIL)
         viewModel.onEmailFocusChanged(isFocused = false)
 
         viewModel.onPasswordFocusChanged(isFocused = true)
-        viewModel.onPasswordChanged("password123")
+        viewModel.onPasswordChanged(Constants.Auth.DEFAULT_PASSWORD)
         viewModel.onPasswordFocusChanged(isFocused = false)
 
         assertNull(viewModel.uiState.value.displayEmailError)

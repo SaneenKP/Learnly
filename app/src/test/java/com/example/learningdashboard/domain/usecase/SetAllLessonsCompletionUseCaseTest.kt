@@ -3,32 +3,41 @@ package com.example.learningdashboard.domain.usecase
 import com.example.learningdashboard.domain.model.Course
 import com.example.learningdashboard.domain.model.Lesson
 import com.example.learningdashboard.domain.repository.CourseRepository
-import com.example.learningdashboard.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class LogoutUseCaseTest {
+class SetAllLessonsCompletionUseCaseTest {
 
     @Test
-    fun invoke_clearsDatabaseAndResetsDataStoreLoginState() = runTest {
+    fun invoke_selectAll_marksAllLessonsCompleted() = runTest {
         val fakeRepo = FakeCourseRepository()
-        val fakeUserPreferences = FakeUserPreferencesRepository(initialLoggedIn = true)
+        val useCase = SetAllLessonsCompletionUseCaseImpl(fakeRepo)
 
-        val logoutUseCase = LogoutUseCaseImpl(fakeRepo, fakeUserPreferences)
+        useCase(courseId = 1L, completed = true)
 
-        logoutUseCase()
+        assertEquals(1L, fakeRepo.lastBatchCourseId)
+        assertTrue(fakeRepo.lastBatchCompleted == true)
+    }
 
-        assertEquals(1, fakeRepo.clearAllDataCallCount)
-        assertFalse(fakeUserPreferences.isLoggedIn.first())
+    @Test
+    fun invoke_clearAll_marksAllLessonsIncomplete() = runTest {
+        val fakeRepo = FakeCourseRepository()
+        val useCase = SetAllLessonsCompletionUseCaseImpl(fakeRepo)
+
+        useCase(courseId = 1L, completed = false)
+
+        assertEquals(1L, fakeRepo.lastBatchCourseId)
+        assertFalse(fakeRepo.lastBatchCompleted == true)
     }
 
     private class FakeCourseRepository : CourseRepository {
-        var clearAllDataCallCount = 0
+        var lastBatchCourseId: Long? = null
+        var lastBatchCompleted: Boolean? = null
 
         override fun observeCourses(): Flow<List<Course>> = MutableStateFlow(emptyList())
         override fun observeCourse(courseId: Long): Flow<Course?> = MutableStateFlow(null)
@@ -38,19 +47,12 @@ class LogoutUseCaseTest {
         override suspend fun fetchAndStoreCourses() {}
         override suspend fun fetchAndStoreLessons(courseId: Long) {}
         override suspend fun markLessonCompleted(courseId: Long, lessonId: Long, completed: Boolean) {}
-        override suspend fun setAllLessonsCompletion(courseId: Long, completed: Boolean) {}
 
-        override suspend fun clearAllData() {
-            clearAllDataCallCount++
+        override suspend fun setAllLessonsCompletion(courseId: Long, completed: Boolean) {
+            lastBatchCourseId = courseId
+            lastBatchCompleted = completed
         }
-    }
 
-    private class FakeUserPreferencesRepository(initialLoggedIn: Boolean) : UserPreferencesRepository {
-        private val _isLoggedIn = MutableStateFlow(initialLoggedIn)
-        override val isLoggedIn: Flow<Boolean> = _isLoggedIn
-
-        override suspend fun setLoggedIn(isLoggedIn: Boolean) {
-            _isLoggedIn.value = isLoggedIn
-        }
+        override suspend fun clearAllData() {}
     }
 }
